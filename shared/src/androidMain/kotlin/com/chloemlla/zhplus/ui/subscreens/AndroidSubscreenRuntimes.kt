@@ -46,6 +46,9 @@ import com.chloemlla.zhplus.data.asApiEnvironment
 import com.chloemlla.zhplus.shared.network.ClashPartnerCompat
 import com.chloemlla.zhplus.shared.platform.androidUserMessageSink
 import com.chloemlla.zhplus.shared.platform.rememberIsLiteVariant
+import com.chloemlla.zhplus.shared.platform.androidUserMessageSink
+import com.chloemlla.zhplus.ui.subscreens.IdentityManagementRuntime
+import com.chloemlla.zhplus.ui.subscreens.unsupportedIdentityManagementRuntime
 import com.chloemlla.zhplus.updater.UpdateManager
 import com.chloemlla.zhplus.updater.UpdateManager.UpdateState
 import com.chloemlla.zhplus.util.PowerSaveModeCompat
@@ -274,3 +277,7 @@ actual fun rememberOpenSourceLicensesLibraries(): Libs {
 
 @Composable
 actual fun rememberShowFullVariantLicenses(): Boolean = !rememberIsLiteVariant()
+
+@Composable
+actual fun rememberIdentityManagementRuntime(): IdentityManagementRuntime =
+    unsupportedIdentityManagementRuntime("Android 身份管理由系统设置页处理")

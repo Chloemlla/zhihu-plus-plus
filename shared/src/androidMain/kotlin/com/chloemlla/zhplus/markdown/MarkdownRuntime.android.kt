@@ -36,6 +36,13 @@ actual fun rememberMarkdownRuntime(): MarkdownRuntime {
 }
 
 @Composable
+actual fun rememberMarkdownMathFont(): MathFont? {
+    val context = LocalContext.current
+    val httpClient = AccountData.httpClient(context)
+    return rememberLatexFonts(context, httpClient).downloaded?.mathFont
+}
+
+@Composable
 actual fun rememberMarkdownImageRequestHeaders(): MarkdownImageRequestHeaders {
     val userAgent = AccountData.data.userAgent
     return MarkdownImageRequestHeaders(
