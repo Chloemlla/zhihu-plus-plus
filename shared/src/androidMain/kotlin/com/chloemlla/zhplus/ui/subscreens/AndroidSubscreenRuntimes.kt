@@ -46,7 +46,6 @@ import com.chloemlla.zhplus.data.asApiEnvironment
 import com.chloemlla.zhplus.shared.network.ClashPartnerCompat
 import com.chloemlla.zhplus.shared.platform.androidUserMessageSink
 import com.chloemlla.zhplus.shared.platform.rememberIsLiteVariant
-import com.chloemlla.zhplus.shared.platform.androidUserMessageSink
 import com.chloemlla.zhplus.ui.subscreens.IdentityManagementRuntime
 import com.chloemlla.zhplus.ui.subscreens.unsupportedIdentityManagementRuntime
 import com.chloemlla.zhplus.updater.UpdateManager
