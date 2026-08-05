@@ -17,10 +17,10 @@
 
 package com.chloemlla.zhplus.util
 
-import com.fleeksoft.ksoup.Ksoup
 import com.chloemlla.zhplus.data.SegmentInfoMark
 import com.chloemlla.zhplus.data.SegmentInfoMeta
 import com.chloemlla.zhplus.data.SegmentInfoParagraph
+import com.fleeksoft.ksoup.Ksoup
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
