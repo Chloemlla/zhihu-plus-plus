@@ -17,14 +17,14 @@
 
 package com.chloemlla.zhplus.util
 
-import com.fleeksoft.ksoup.Ksoup
-import com.fleeksoft.ksoup.nodes.Element
-import com.fleeksoft.ksoup.nodes.Node
-import com.fleeksoft.ksoup.nodes.TextNode
 import com.chloemlla.zhplus.data.SegmentInfoMark
 import com.chloemlla.zhplus.data.SegmentInfoMeta
 import com.chloemlla.zhplus.data.SegmentInfoParagraph
 import com.chloemlla.zhplus.data.effectiveSegInfo
+import com.fleeksoft.ksoup.Ksoup
+import com.fleeksoft.ksoup.nodes.Element
+import com.fleeksoft.ksoup.nodes.Node
+import com.fleeksoft.ksoup.nodes.TextNode
 
 data class SegmentHighlightSpan(
     val text: String,
