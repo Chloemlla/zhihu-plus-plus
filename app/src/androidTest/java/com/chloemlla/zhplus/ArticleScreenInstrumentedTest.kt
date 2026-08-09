@@ -21,6 +21,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
+import android.view.InputDevice
+import android.view.MotionEvent
 import androidx.compose.foundation.ComposeFoundationFlags
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
@@ -93,6 +95,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class ArticleScreenInstrumentedTest {
@@ -139,6 +143,69 @@ class ArticleScreenInstrumentedTest {
         composeRule.onNodeWithText("离线作者").assertIsDisplayed()
         composeRule.onNodeWithText("IP属地：上海").assertExists()
         composeRule.onNodeWithText("第 1 段离线正文", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun autoHideTitleRemainsResponsiveWhenDirectionChangesDuringHideAnimation() {
+        setArticleScreen()
+
+        val rootBounds = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+        fun injectSwipe(
+            startYFraction: Float,
+            endYFraction: Float,
+            durationMillis: Long,
+        ) {
+            val downTime = SystemClock.uptimeMillis()
+            val x = rootBounds.center.x
+            val startY = rootBounds.height * startYFraction
+            val endY = rootBounds.height * endYFraction
+            val steps = maxOf((durationMillis / 15).toInt(), 1)
+
+            for (step in 0..steps) {
+                val eventTime = SystemClock.uptimeMillis()
+                val action = when (step) {
+                    0 -> MotionEvent.ACTION_DOWN
+                    steps -> MotionEvent.ACTION_UP
+                    else -> MotionEvent.ACTION_MOVE
+                }
+                val fraction = step.toFloat() / steps
+                val event = MotionEvent.obtain(
+                    downTime,
+                    eventTime,
+                    action,
+                    x,
+                    startY + (endY - startY) * fraction,
+                    0,
+                )
+                event.source = InputDevice.SOURCE_TOUCHSCREEN
+                try {
+                    assertTrue(instrumentation.uiAutomation.injectInputEvent(event, true))
+                } finally {
+                    event.recycle()
+                }
+                if (step < steps) SystemClock.sleep(durationMillis / steps)
+            }
+        }
+
+        injectSwipe(0.64f, 0.49f, 600)
+        repeat(4) {
+            injectSwipe(0.57f, 0.51f, 90)
+            injectSwipe(0.51f, 0.58f, 90)
+        }
+
+        val mainThreadResponsive = CountDownLatch(1)
+        composeRule.activity.runOnUiThread { mainThreadResponsive.countDown() }
+        assertTrue(
+            "Main thread stopped responding after reversing scroll during title hide animation",
+            mainThreadResponsive.await(3, TimeUnit.SECONDS),
+        )
+
+        injectSwipe(0.3f, 0.8f, 240)
+        composeRule.waitForIdle()
+        composeRule.onNodeWithContentDescription("更多选项").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("复制链接").assertIsDisplayed()
     }
 
     @Test
@@ -273,6 +340,28 @@ class ArticleScreenInstrumentedTest {
         }
     }
 
+    private fun waitUntilSelectionHighlight(
+        text: String,
+        failureMessage: String,
+    ) {
+        composeRule.waitUntil(failureMessage, timeoutMillis = 5_000) {
+            runCatching {
+                composeRule
+                    .onNodeWithText(text)
+                    .captureToImage()
+                    .toPixelMap()
+                    .let { pixels ->
+                        (0 until pixels.height).any { y ->
+                            (0 until pixels.width).any { x ->
+                                val pixel = pixels[x, y]
+                                pixel.red > 0.9f && pixel.blue > 0.9f && pixel.green < 0.1f
+                            }
+                        }
+                    }
+            }.getOrDefault(false)
+        }
+    }
+
     @OptIn(ExperimentalFoundationApi::class)
     @Test
     fun highlightedParagraphRemainsSelectable() {
@@ -376,18 +465,23 @@ class ArticleScreenInstrumentedTest {
             val targetBounds = composeRule
                 .onNodeWithText(HIGHLIGHT_SELECTION_TARGET)
                 .fetchSemanticsNode()
-                .boundsInRoot
-            val handleBounds = endHandle.fetchSemanticsNode().boundsInRoot
+                .boundsInWindow
+            val handleBounds = endHandle.fetchSemanticsNode().boundsInWindow
             endHandle.performTouchInput {
-                down(center)
-                advanceEventTime(100)
-                moveTo(
-                    Offset(
-                        x = targetBounds.right - handleBounds.left - 1f,
-                        y = targetBounds.bottom - handleBounds.top - 1f,
-                    ),
-                    delayMillis = 500,
+                val start = center
+                val destination = Offset(
+                    x = targetBounds.right - handleBounds.left - 1f,
+                    y = targetBounds.bottom - handleBounds.top - 1f,
                 )
+                down(start)
+                advanceEventTime(100)
+                repeat(10) { step ->
+                    val fraction = (step + 1) / 10f
+                    moveTo(
+                        start + (destination - start) * fraction,
+                        delayMillis = 50,
+                    )
+                }
                 up()
             }
             val selectedPixels = composeRule
@@ -406,13 +500,33 @@ class ArticleScreenInstrumentedTest {
                 "Dragging out of a highlighted paragraph must keep the cross-block selection visible; found $selectedPixels selected pixels",
                 selectedPixels >= 1_000,
             )
+            waitUntilSelectionHighlight(
+                text = HIGHLIGHT_SELECTION_TARGET,
+                failureMessage = "Selection did not reach the following block after dragging the handle",
+            )
+            val clipboard = composeRule.activity
+                .getSystemService(android.content.ClipboardManager::class.java)
+            clipboard.clearPrimaryClip()
+            composeRule.waitUntil(
+                "System clipboard did not clear before copying the cross-block selection",
+                timeoutMillis = 5_000,
+            ) {
+                !clipboard.hasPrimaryClip()
+            }
             composeRule.runOnIdle {
                 requireNotNull(textToolbar.onCopyRequested).invoke()
             }
-
-            val copiedText = composeRule.activity
-                .getSystemService(android.content.ClipboardManager::class.java)
-                .primaryClip
+            composeRule.waitUntil(
+                "Copy did not publish the cross-block selection to the system clipboard",
+                timeoutMillis = 5_000,
+            ) {
+                clipboard.primaryClip
+                    ?.getItemAt(0)
+                    ?.coerceToText(composeRule.activity)
+                    ?.toString()
+                    ?.contains(HIGHLIGHT_SELECTION_TARGET) == true
+            }
+            val copiedText = clipboard.primaryClip
                 ?.getItemAt(0)
                 ?.coerceToText(composeRule.activity)
                 ?.toString()
@@ -638,7 +752,13 @@ class ArticleScreenInstrumentedTest {
         try {
             val textToolbar = CapturingTextToolbar()
             composeRule.setScreenContent {
-                CompositionLocalProvider(LocalTextToolbar provides textToolbar) {
+                CompositionLocalProvider(
+                    LocalTextToolbar provides textToolbar,
+                    LocalTextSelectionColors provides TextSelectionColors(
+                        handleColor = Color.Magenta,
+                        backgroundColor = Color.Magenta,
+                    ),
+                ) {
                     RenderMarkdownText(
                         markdown =
                             """
@@ -672,27 +792,54 @@ class ArticleScreenInstrumentedTest {
             val targetBounds = composeRule
                 .onNodeWithText("末段拖动必须到达这里。")
                 .fetchSemanticsNode()
-                .boundsInRoot
-            val handleBounds = endHandle.fetchSemanticsNode().boundsInRoot
+                .boundsInWindow
+            val handleBounds = endHandle.fetchSemanticsNode().boundsInWindow
             endHandle.performTouchInput {
-                down(center)
-                advanceEventTime(100)
-                moveTo(
-                    Offset(
-                        x = targetBounds.right - handleBounds.left - 1f,
-                        y = targetBounds.bottom - handleBounds.top - 1f,
-                    ),
-                    delayMillis = 500,
+                val start = center
+                val destination = Offset(
+                    x = targetBounds.right - handleBounds.left - 1f,
+                    y = targetBounds.bottom - handleBounds.top - 1f,
                 )
+                down(start)
+                advanceEventTime(100)
+                repeat(10) { step ->
+                    val fraction = (step + 1) / 10f
+                    moveTo(
+                        start + (destination - start) * fraction,
+                        delayMillis = 50,
+                    )
+                }
                 up()
+            }
+            waitUntilSelectionHighlight(
+                text = "末段拖动必须到达这里。",
+                failureMessage = "Selection did not reach the final block after dragging the handle",
+            )
+            val clipboard = composeRule.activity
+                .getSystemService(android.content.ClipboardManager::class.java)
+            clipboard.clearPrimaryClip()
+            composeRule.waitUntil(
+                "System clipboard did not clear before copying the complete text layer selection",
+                timeoutMillis = 5_000,
+            ) {
+                !clipboard.hasPrimaryClip()
             }
             composeRule.runOnIdle {
                 requireNotNull(textToolbar.onCopyRequested).invoke()
             }
-
-            val copiedText = composeRule.activity
-                .getSystemService(android.content.ClipboardManager::class.java)
-                .primaryClip
+            composeRule.waitUntil(
+                "Copy did not publish the complete text layer selection to the system clipboard",
+                timeoutMillis = 5_000,
+            ) {
+                clipboard.primaryClip
+                    ?.getItemAt(0)
+                    ?.coerceToText(composeRule.activity)
+                    ?.toString()
+                    ?.let { copied ->
+                        copied.contains("起始段落") && copied.contains("末段拖动必须到达这里")
+                    } == true
+            }
+            val copiedText = clipboard.primaryClip
                 ?.getItemAt(0)
                 ?.coerceToText(composeRule.activity)
                 ?.toString()
