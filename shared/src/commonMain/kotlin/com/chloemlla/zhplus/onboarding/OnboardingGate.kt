@@ -118,7 +118,7 @@ private fun SettingsStore.looksLikeExistingInstall(): Boolean {
     if (getStringOrNull("skippedVersion") != null) return true
     if (getStringOrNull("recommendationMode") != null) return true
     if (getStringOrNull("themeMode") != null) return true
-    if (getStringOrNull("bottom_bar_items") != null) return true
+    if (getStringSet("bottom_bar_items", emptySet()).isNotEmpty()) return true
     if (getStringOrNull("githubToken") != null) return true
     if (getBoolean("developer", false)) return true
     if (getBoolean("duo3_all", false)) return true

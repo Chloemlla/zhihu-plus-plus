@@ -290,14 +290,6 @@ class NotificationScreenInstrumentedTest {
         unreadCounts: Map<MobileNotificationCategory, Int> = emptyMap(),
         notifications: List<MobileNotificationTimelineItem> = listOf(notificationFixture()),
     ) {
-        waitUntil(
-            "Notification screen did not finish its initial refresh",
-            timeoutMillis = 5_000,
-        ) {
-            ViewModelProvider(activity)[NotificationViewModel::class.java].let { viewModel ->
-                !viewModel.isLoading && viewModel.isEnd
-            }
-        }
         activity.runOnUiThread {
             val viewModel = ViewModelProvider(activity)[NotificationViewModel::class.java]
             viewModel.allData.clear()
