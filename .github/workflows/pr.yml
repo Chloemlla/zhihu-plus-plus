@@ -190,7 +190,9 @@ jobs:
     timeout-minutes: 15
     strategy:
       fail-fast: false
-      max-parallel: 5
+      # ubuntu-latest 是 2 核 runner，5 路并行 swiftshader 模拟器会争抢资源导致
+      # touch 注入失败 / ANR / 组合超时等 flaky 失败，降到 2 以保证每个模拟器资源充足。
+      max-parallel: 2
       matrix:
         include:
           - shard_index: 0

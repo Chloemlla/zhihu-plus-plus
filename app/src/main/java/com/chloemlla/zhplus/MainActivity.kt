@@ -586,6 +586,8 @@ class MainActivity :
     }
 
     private fun navigateToMainTabs() {
+        // 隔离测试宿主(setScreenContent)替换 NavHost 后会清空导航图，此时仅需保留 tab 目标，无需导航。
+        if (runCatching { navController.graph }.getOrNull() == null) return
         navController.navigate(MainTabs) {
             launchSingleTop = true
             restoreState = true
