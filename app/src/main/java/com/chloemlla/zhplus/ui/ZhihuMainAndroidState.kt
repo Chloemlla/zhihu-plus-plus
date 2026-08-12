@@ -34,6 +34,7 @@ import com.chloemlla.zhplus.navigation.OnlineHistory
 import com.chloemlla.zhplus.shared.platform.androidSettingsStore
 import com.chloemlla.zhplus.ui.subscreens.BOTTOM_BAR_ITEMS_PREFERENCE_KEY
 import com.chloemlla.zhplus.ui.subscreens.BOTTOM_BAR_ITEM_ORDER_PREFERENCE_KEY
+import com.chloemlla.zhplus.ui.subscreens.COLLECTION_DIRECT_BROWSE_PREFERENCE_KEY
 import com.chloemlla.zhplus.ui.subscreens.START_DESTINATION_PREFERENCE_KEY
 import com.chloemlla.zhplus.ui.subscreens.bottomBarItemOrderFromPreference
 import com.chloemlla.zhplus.ui.subscreens.defaultBottomBarSelectionKeys
@@ -74,6 +75,7 @@ fun rememberAndroidZhihuMainPreferenceState(): ZhihuMainPreferenceState {
             duo3HomeAccount = duo3HomeAccount,
             tapToScrollToTopEnabled = settings.getBoolean("bottomBarTapScrollToTop", true),
             autoHideBottomBar = settings.getBoolean("autoHideBottomBar", false),
+            collectionDirectBrowseEnabled = settings.getBoolean(COLLECTION_DIRECT_BROWSE_PREFERENCE_KEY, false),
             selectedBottomBarItemKeys = orderedSelectedKeys,
             startDestination = navDestinationFromName(
                 resolveValidStartDestinationKey(

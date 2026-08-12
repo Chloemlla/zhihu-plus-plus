@@ -31,6 +31,7 @@ import com.chloemlla.zhplus.shared.account.ZhihuAccountRepository
 import com.chloemlla.zhplus.shared.account.ZhihuAccountSession
 import com.chloemlla.zhplus.shared.account.ZhihuAccountSessionStore
 import com.chloemlla.zhplus.shared.account.ZhihuIdentityClient
+import com.chloemlla.zhplus.shared.account.ZhihuMobileLoginToken
 import com.chloemlla.zhplus.shared.data.Person
 import com.chloemlla.zhplus.shared.data.ZhihuJson
 import com.chloemlla.zhplus.shared.data.installZhihuCommonClientConfig
@@ -158,6 +159,11 @@ object AccountData {
 
     suspend fun verifyLogin(context: Context, cookies: Map<String, String>): Boolean =
         accountClient(context).verifyAndSave(cookies.toMutableMap())
+
+    suspend fun verifyMobileLogin(
+        context: Context,
+        token: ZhihuMobileLoginToken,
+    ): Boolean = accountClient(context).verifyMobileAndSave(token)
 
     fun delete(context: Context) {
         accountClient(context).clear()

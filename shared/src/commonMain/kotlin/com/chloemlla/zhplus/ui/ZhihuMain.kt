@@ -185,6 +185,7 @@ fun ZhihuMain(
     val duo3HomeAccount = preferenceState.duo3HomeAccount
     val tapToScrollToTopEnabled = preferenceState.tapToScrollToTopEnabled
     val autoHideBottomBar = preferenceState.autoHideBottomBar
+    val collectionDirectBrowseEnabled = preferenceState.collectionDirectBrowseEnabled
     val selectedBottomBarItemKeys = preferenceState.selectedBottomBarItemKeys
     val startDestination = preferenceState.startDestination
     val reloadBottomBarPreferences = preferenceState::reload
@@ -397,6 +398,7 @@ fun ZhihuMain(
                         pages = mainTabPages,
                         scrollToTopTrigger = scrollToTopTrigger,
                         innerPadding = innerPadding,
+                        collectionDirectBrowseEnabled = collectionDirectBrowseEnabled,
                     )
                 }
                 composable<Question> { navEntry ->
@@ -543,6 +545,7 @@ private fun MainTabsPager(
     pages: List<MainTabPage>,
     scrollToTopTrigger: Int,
     innerPadding: PaddingValues,
+    collectionDirectBrowseEnabled: Boolean,
 ) {
     HorizontalPager(
         state = pagerState,
@@ -573,19 +576,37 @@ private fun MainTabsPager(
                 scrollToTopTrigger = scrollToTopTrigger,
                 isActive = pagerState.currentPage == pageIndex,
             )
-            MainTabPage.MyCollectionsPage -> MyCollectionsTopLevelPage()
+            MainTabPage.MyCollectionsPage -> MyCollectionsTopLevelPage(
+                scrollToTopTrigger = scrollToTopTrigger,
+                collectionDirectBrowseEnabled = collectionDirectBrowseEnabled,
+                isActive = pagerState.currentPage == pageIndex,
+            )
             MainTabPage.AccountPage -> AccountSettingScreen(innerPadding)
         }
     }
 }
 
 @Composable
-private fun MyCollectionsTopLevelPage() {
+private fun MyCollectionsTopLevelPage(
+    scrollToTopTrigger: Int,
+    collectionDirectBrowseEnabled: Boolean,
+    isActive: Boolean,
+) {
     val account = rememberAccountSettingsAccountState().value
-    CollectionScreen(
-        urlToken = account.urlToken,
-        showBackButton = false,
-    )
+    if (collectionDirectBrowseEnabled) {
+        CollectionBrowseScreen(
+            urlToken = account.urlToken,
+            showBackButton = false,
+            scrollToTopTrigger = scrollToTopTrigger,
+            isActive = isActive,
+        )
+    } else {
+        CollectionScreen(
+            urlToken = account.urlToken,
+            showBackButton = false,
+            isActive = isActive,
+        )
+    }
 }
 
 private val TopLevelDestination.openFrom: String?

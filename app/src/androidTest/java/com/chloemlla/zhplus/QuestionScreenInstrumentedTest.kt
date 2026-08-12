@@ -221,6 +221,36 @@ class QuestionScreenInstrumentedTest {
     }
 
     @Test
+    fun longQuestionDetailRemainsVisibleAfterReturnFromAnswerList() {
+        val lastDetailParagraph =
+            "问题详情回归段落 36：这是一段足够长的正文，用于覆盖超过屏幕高度的问题描述滚动场景。"
+        val detail = (1..36).joinToString("") { index ->
+            "<p>问题详情回归段落 $index：这是一段足够长的正文，用于覆盖超过屏幕高度的问题描述滚动场景。</p>"
+        }
+        mockQuestionDetail(detail = detail)
+        val viewModel = seedQuestionViewModel(itemCount = 24)
+        val farAnswerTag = "question_feed_item_${viewModel.displayItems[12].stableKey}"
+        setScreen()
+
+        composeRule.waitUntilTextExists("345 浏览")
+        composeRule
+            .onNodeWithTag(QUESTION_SCREEN_LIST_TAG)
+            .performScrollToNode(hasTestTag(QUESTION_DETAIL_TOGGLE_TAG))
+        composeRule.onNodeWithTag(QUESTION_DETAIL_TOGGLE_TAG).performClick()
+        composeRule.waitUntilTagIsDisplayed(QUESTION_DETAIL_CONTENT_TAG)
+        composeRule
+            .onNodeWithTag(QUESTION_SCREEN_LIST_TAG)
+            .performScrollToNode(hasTestTag(farAnswerTag))
+        composeRule.onNodeWithTag(farAnswerTag).assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag(QUESTION_SCREEN_LIST_TAG)
+            .performScrollToNode(hasText(lastDetailParagraph))
+        composeRule.onNodeWithTag(QUESTION_DETAIL_CONTENT_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText(lastDetailParagraph).assertIsDisplayed()
+    }
+
+    @Test
     fun blockedUserAnswersAreRemovedFromQuestionFeedProcessing() {
         /*
          * Expected behavior:
@@ -273,11 +303,14 @@ class QuestionScreenInstrumentedTest {
         return viewModel
     }
 
-    private fun mockQuestionDetail(questionId: Long = 123456789L) {
+    private fun mockQuestionDetail(
+        questionId: Long = 123456789L,
+        detail: String = "<p>离线问题详情用于 QuestionScreen instrumented test。</p>",
+    ) {
         ZhihuMockApi.mockJsonPrefix(
             method = HttpMethod.Get,
             urlPrefix = "https://www.zhihu.com/api/v4/questions/$questionId?",
-            body = ZhihuJson.json.encodeToString(seededQuestionDetail(questionId)),
+            body = ZhihuJson.json.encodeToString(seededQuestionDetail(questionId, detail)),
         )
     }
 
@@ -323,7 +356,10 @@ class QuestionScreenInstrumentedTest {
         }
     }
 
-    private fun seededQuestionDetail(questionId: Long): DataHolder.Question = DataHolder.Question(
+    private fun seededQuestionDetail(
+        questionId: Long,
+        detail: String,
+    ): DataHolder.Question = DataHolder.Question(
         type = "question",
         id = questionId,
         title = "离线问题标题",
@@ -335,7 +371,7 @@ class QuestionScreenInstrumentedTest {
         visitCount = 345,
         commentCount = 7,
         followerCount = 89,
-        detail = "<p>离线问题详情用于 QuestionScreen instrumented test。</p>",
+        detail = detail,
         relationship = DataHolder.QuestionRelationship(isFollowing = false),
         topics = emptyList(),
         author = DataHolder.Author(
