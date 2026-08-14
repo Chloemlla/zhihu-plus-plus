@@ -19,8 +19,8 @@ package com.chloemlla.zhplus.shared.account
 
 import com.chloemlla.zhplus.shared.data.ZhihuJson
 import com.chloemlla.zhplus.shared.data.toCookieHeaderString
+import com.chloemlla.zhplus.util.ZhihuMessageBodyEncryptor
 import com.chloemlla.zhplus.util.hmacSha1Hex
-import com.github.zly2006.zhihu.util.ZhihuMessageBodyEncryptor
 import io.ktor.client.HttpClient
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.accept

@@ -319,6 +319,27 @@ fun HomeScreen(
         }
     }
 
+    // 在线通知加载
+    LaunchedEffect(lifecycleOwner, paginationEnvironment, versionName) {
+        if (versionName != null) {
+            lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                while (true) {
+                    try {
+                        onlineNotifications = onlineNotificationRepository.load(
+                            versionName = versionName,
+                            httpClient = paginationEnvironment.httpClient(),
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e("HomeScreen", "Failed to load online notifications", e)
+                    }
+                    delay(HOME_NOTIFICATION_REFRESH_INTERVAL_MILLIS)
+                }
+            }
+        }
+    }
+
     // 显示错误信息
     LaunchedEffect(viewModel.errorMessage) {
         viewModel.errorMessage?.let {

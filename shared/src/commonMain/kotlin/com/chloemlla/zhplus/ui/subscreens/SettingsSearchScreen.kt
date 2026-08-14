@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.github.zly2006.zhihu.ui.subscreens
+package com.chloemlla.zhplus.ui.subscreens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,17 +48,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
-import com.github.zly2006.zhihu.navigation.Account
-import com.github.zly2006.zhihu.navigation.LocalNavigator
-import com.github.zly2006.zhihu.navigation.NavDestination
-import com.github.zly2006.zhihu.navigation.Notification
-import com.github.zly2006.zhihu.notification.NotificationType
-import com.github.zly2006.zhihu.platform.rememberSettingsStore
-import com.github.zly2006.zhihu.ui.ANSWER_DOUBLE_TAP_ACTION_PREFERENCE_KEY
-import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
-import com.github.zly2006.zhihu.ui.components.SettingItem
-import com.github.zly2006.zhihu.ui.components.SettingItemGroup
+import com.chloemlla.zhplus.navigation.Account
+import com.chloemlla.zhplus.navigation.LocalNavigator
+import com.chloemlla.zhplus.navigation.NavDestination
+import com.chloemlla.zhplus.navigation.Notification
+import com.chloemlla.zhplus.shared.aigc.AIGC_MARKING_ENABLED_PREFERENCE_KEY
+import com.chloemlla.zhplus.shared.notification.NotificationType
+import com.chloemlla.zhplus.shared.platform.rememberSettingsStore
+import com.chloemlla.zhplus.ui.ANSWER_DOUBLE_TAP_ACTION_PREFERENCE_KEY
+import com.chloemlla.zhplus.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
+import com.chloemlla.zhplus.ui.components.SettingItem
+import com.chloemlla.zhplus.ui.components.SettingItemGroup
 
 const val SETTINGS_SEARCH_INPUT_TAG = "settingsSearch.input"
 const val SETTINGS_SEARCH_RESULTS_TAG = "settingsSearch.results"

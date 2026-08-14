@@ -163,7 +163,7 @@ data object Daily : TopLevelDestination {
 @Serializable
 data object Notification : NavDestination {
     @Serializable
-data class NotificationSettings(
+    data class NotificationSettings(
         val setting: String = "",
     ) : NavDestination
 
