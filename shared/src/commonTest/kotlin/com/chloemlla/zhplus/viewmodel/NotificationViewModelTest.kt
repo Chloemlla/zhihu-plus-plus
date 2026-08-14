@@ -17,7 +17,7 @@
 
 package com.chloemlla.zhplus.viewmodel
 
-import com.github.zly2006.zhihu.util.ZhihuMessageBodyEncryptor
+import com.chloemlla.zhplus.util.ZhihuMessageBodyEncryptor
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond

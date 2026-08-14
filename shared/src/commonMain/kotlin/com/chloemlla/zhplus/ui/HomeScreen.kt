@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.MarkUnreadChatAlt
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,8 +73,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -93,6 +96,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.chloemlla.zhplus.navigation.Account
+import com.chloemlla.zhplus.navigation.Article
+import com.chloemlla.zhplus.navigation.ArticleType
 import com.chloemlla.zhplus.navigation.LocalNavigator
 import com.chloemlla.zhplus.navigation.Notification
 import com.chloemlla.zhplus.navigation.Pin
@@ -107,6 +112,15 @@ import com.chloemlla.zhplus.shared.data.ZhihuJson
 import com.chloemlla.zhplus.shared.data.ZhihuMeNotifications
 import com.chloemlla.zhplus.shared.data.navDestination
 import com.chloemlla.zhplus.shared.data.target
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_ACTION_OPEN_ANSWER
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_ACTION_OPEN_ARTICLE
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_ACTION_OPEN_PIN
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_ACTION_OPEN_UPDATE_SETTINGS
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_ACTION_OPEN_URL
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_ACTION_SET_SETTING
+import com.chloemlla.zhplus.shared.notification.HOME_NOTIFICATION_REFRESH_INTERVAL_MILLIS
+import com.chloemlla.zhplus.shared.notification.OnlineHomeNotification
+import com.chloemlla.zhplus.shared.notification.OnlineHomeNotificationRepository
 import com.chloemlla.zhplus.shared.notification.rememberNotificationSettingsStore
 import com.chloemlla.zhplus.shared.platform.UserMessageDuration
 import com.chloemlla.zhplus.shared.platform.rememberExternalUrlOpener
@@ -131,6 +145,8 @@ import com.chloemlla.zhplus.ui.components.ProgressIndicatorFooter
 import com.chloemlla.zhplus.ui.components.rememberFeedBlockActions
 import com.chloemlla.zhplus.ui.subscreens.DEFAULT_FAB_OPACITY
 import com.chloemlla.zhplus.ui.subscreens.PREF_FAB_OPACITY
+import com.chloemlla.zhplus.ui.subscreens.SystemUpdateState
+import com.chloemlla.zhplus.ui.subscreens.rememberSystemUpdateRuntime
 import com.chloemlla.zhplus.viewmodel.feed.BaseFeedViewModel
 import com.chloemlla.zhplus.viewmodel.feed.HomeFeedInteractionViewModel
 import com.chloemlla.zhplus.viewmodel.feed.HomeFeedViewModel
@@ -139,7 +155,13 @@ import com.chloemlla.zhplus.viewmodel.rememberPaginationEnvironment
 import com.chloemlla.zhplus.viewmodel.za.AndroidHomeFeedViewModel
 import com.chloemlla.zhplus.viewmodel.za.MixedHomeFeedViewModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 const val PREFERENCE_NAME = "com.chloemlla.zhplus_preferences"
 const val ARTICLE_USE_WEBVIEW_PREFERENCE_KEY = "webviewRenderLegacy"
@@ -157,9 +179,12 @@ const val HOME_ACCOUNT_BUTTON_TAG = "home_account_button"
 const val HOME_FEED_LIST_TAG = "home_feed_list"
 const val HOME_REFRESH_BUTTON_TAG = "home_refresh_button"
 const val HOME_AUTHOR_POLL_ANNOUNCEMENT_TAG = "home_author_poll_announcement"
+const val HOME_ONLINE_NOTIFICATION_TAG = "home_online_notification"
 private const val MAX_HOME_PIN_ANNOUNCEMENTS = 3
 
 fun homeAuthorPollAnnouncementTag(pinId: Long): String = "$HOME_AUTHOR_POLL_ANNOUNCEMENT_TAG:$pinId"
+
+fun homeOnlineNotificationTag(uuid: String): String = "$HOME_ONLINE_NOTIFICATION_TAG:$uuid"
 
 fun homePinAnnouncementReadKey(pinId: Long): String = "readHomePinAnnouncement_$pinId"
 
@@ -203,11 +228,29 @@ fun HomeScreen(
         } ?: RecommendationMode.MIXED
     val startupCache = rememberHomeFeedStartupCache(currentRecommendationMode)
 
-    val account = rememberHomeAccountState()
-    val updateAnnouncement = rememberHomeUpdateAnnouncement()
+    val requestLogin = rememberHomeLoginRequester()
+    val account = rememberAccountSettingsAccountState().value
+    if (account.login && !account.hasRequiredCookie) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Cookie 不完整") },
+            text = { Text("当前登录信息缺少必要的 Cookie d_c0，请重新登录。") },
+            confirmButton = {
+                TextButton(onClick = { requestLogin() }) {
+                    Text("重新登录")
+                }
+            },
+        )
+    }
+    val updateState by rememberSystemUpdateRuntime().state.collectAsState()
+    val updateAnnouncement = updateState as? SystemUpdateState.UpdateAvailable
+    val versionName = rememberAppVersionInfo().substringBefore(' ').takeIf { it.firstOrNull()?.isDigit() == true }
+    val onlineNotificationRepository = remember(settings) {
+        OnlineHomeNotificationRepository(settings)
+    }
+    var onlineNotifications by remember { mutableStateOf(emptyList<OnlineHomeNotification>()) }
     val installedAtLeastThreeHours = rememberHomeInstalledAtLeastThreeHours()
     val isDebuggable = rememberHomeIsDebuggable()
-    val requestLogin = rememberHomeLoginRequester()
     val feedBlockActions = rememberFeedBlockActions()
     val isLiteVariant = rememberIsLiteVariant()
     val viewModel: BaseFeedViewModel = when (currentRecommendationMode) {
