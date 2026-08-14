@@ -490,6 +490,7 @@ data class ZhihuMainNavigationState(
 
 data class AccountSettingsAccountState(
     val login: Boolean = false,
+    val hasRequiredCookie: Boolean = true,
     val username: String = "",
     val avatarUrl: String? = null,
     val id: String = "",

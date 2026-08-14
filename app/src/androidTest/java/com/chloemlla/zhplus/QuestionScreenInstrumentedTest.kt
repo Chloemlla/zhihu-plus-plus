@@ -58,6 +58,7 @@ import com.chloemlla.zhplus.ui.QUESTION_SORT_UPDATED_TAG
 import com.chloemlla.zhplus.ui.QUESTION_STATS_TAG
 import com.chloemlla.zhplus.ui.QUESTION_TITLE_TAG
 import com.chloemlla.zhplus.ui.QUESTION_VIEW_LOG_BUTTON_TAG
+import com.chloemlla.zhplus.ui.QUESTION_WRITE_ANSWER_BUTTON_TAG
 import com.chloemlla.zhplus.ui.QuestionScreen
 import com.chloemlla.zhplus.viewmodel.PaginationEnvironment
 import com.chloemlla.zhplus.viewmodel.feed.QuestionFeedViewModel
@@ -166,6 +167,25 @@ class QuestionScreenInstrumentedTest {
         } finally {
             instrumentation.removeMonitor(webviewMonitor)
         }
+    }
+
+    @Test
+    fun emptyQuestionDetailKeepsPrimaryActionsAndAnswerSortVisible() {
+        mockQuestionDetail(detail = "")
+        seedQuestionViewModel()
+
+        setScreen()
+
+        composeRule.waitUntilTextExists("345 浏览")
+        composeRule
+            .onNodeWithTag(QUESTION_SCREEN_LIST_TAG)
+            .performScrollToNode(hasTestTag(QUESTION_WRITE_ANSWER_BUTTON_TAG))
+        composeRule.onNodeWithTag(QUESTION_WRITE_ANSWER_BUTTON_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(QUESTION_FOLLOW_BUTTON_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("12 回答").assertIsDisplayed()
+        composeRule.onNodeWithTag(QUESTION_SORT_DEFAULT_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(QUESTION_SORT_UPDATED_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(QUESTION_DETAIL_CONTENT_TAG).assertDoesNotExist()
     }
 
     @Test

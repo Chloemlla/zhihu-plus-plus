@@ -19,6 +19,7 @@ package com.chloemlla.zhplus
 
 import com.chloemlla.zhplus.viewmodel.feed.SearchContentType
 import com.chloemlla.zhplus.viewmodel.feed.SearchSortOption
+import com.chloemlla.zhplus.viewmodel.feed.SearchTab
 import com.chloemlla.zhplus.viewmodel.feed.SearchTimeRange
 import com.chloemlla.zhplus.viewmodel.feed.zhihuSearchUrl
 import org.junit.Assert.assertEquals
@@ -87,6 +88,18 @@ class SearchViewModelUrlTest {
             URL(zhihuSearchUrl("query", timeRange = SearchTimeRange.Year))
                 .queryParameters()["search_source"],
         )
+    }
+
+    @Test
+    fun buildsPeopleSearchUrlWithPeopleSearchType() {
+        val params = URL(
+            zhihuSearchUrl("周源", searchTab = SearchTab.People),
+        ).queryParameters()
+
+        assertEquals("people", params["t"])
+        assertEquals("Normal", params["search_source"])
+        assertNull(params["vertical"])
+        assertNull(params["vertical_info"])
     }
 
     @Test

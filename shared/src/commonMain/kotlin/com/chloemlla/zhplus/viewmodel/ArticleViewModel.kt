@@ -77,6 +77,7 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readLine
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -381,7 +382,7 @@ class ArticleViewModel(
 
     fun toggleFavorite(collectionId: String, remove: Boolean, environment: ZhihuApiEnvironment) {
         if (httpClient == null) return
-        viewModelScope.launch {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
             try {
                 val contentType = when (article.type) {
                     ArticleType.Answer -> "answer"
@@ -402,6 +403,8 @@ class ArticleViewModel(
                 } else {
                     userMessages.showShortMessage("收藏操作失败")
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("ArticleViewModel", "Favorite toggle failed", e)
                 userMessages.showShortMessage("收藏操作失败: ${e.message}")

@@ -548,6 +548,9 @@ fun HomeScreen(
                                 },
                                 colors = AnnouncementCardDefaults.colorsImportant(),
                             )
+                        }
+                        // QQ 群组入群提示
+                        item {
                             AnnouncementCard(
                                 visible = showQQGroup,
                                 title = "欢迎加入 QQ 频道",
@@ -582,7 +585,77 @@ fun HomeScreen(
                                     showAigcMarkingAnnouncement = false
                                 },
                             )
-                            authorPinAnnouncements.forEach { announcement ->
+                        }
+                        // 在线通知
+                        onlineNotifications.forEach { notification ->
+                            val markRead = {
+                                onlineNotificationRepository.markRead(notification)
+                                onlineNotifications = onlineNotifications.filterNot { it.uuid == notification.uuid }
+                            }
+                            item(notification.uuid) {
+                                AnnouncementCard(
+                                    modifier = Modifier.testTag(homeOnlineNotificationTag(notification.uuid)),
+                                    visible = true,
+                                    title = notification.title,
+                                    leadingIcon = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                                    content = notification.content,
+                                    accept = notification.accept?.let { accept ->
+                                        { Text(accept.text) }
+                                    },
+                                    onAccept = {
+                                        val accept = notification.accept
+                                        markRead()
+                                        when (accept?.key) {
+                                            HOME_NOTIFICATION_ACTION_OPEN_URL -> {
+                                                accept.value
+                                                    ?.jsonPrimitive
+                                                    ?.contentOrNull
+                                                    ?.let(openExternalUrl)
+                                            }
+                                            HOME_NOTIFICATION_ACTION_OPEN_UPDATE_SETTINGS -> {
+                                                navigator.onNavigate(Account.SystemAndUpdateSettings)
+                                            }
+                                            HOME_NOTIFICATION_ACTION_OPEN_PIN -> {
+                                                accept.value?.jsonPrimitive?.contentOrNull?.toLongOrNull()?.let {
+                                                    navigator.onNavigate(Pin(it))
+                                                }
+                                            }
+                                            HOME_NOTIFICATION_ACTION_OPEN_ANSWER -> {
+                                                accept.value?.jsonPrimitive?.contentOrNull?.toLongOrNull()?.let {
+                                                    navigator.onNavigate(Article(type = ArticleType.Answer, id = it))
+                                                }
+                                            }
+                                            HOME_NOTIFICATION_ACTION_OPEN_ARTICLE -> {
+                                                accept.value?.jsonPrimitive?.contentOrNull?.toLongOrNull()?.let {
+                                                    navigator.onNavigate(Article(type = ArticleType.Article, id = it))
+                                                }
+                                            }
+                                            HOME_NOTIFICATION_ACTION_SET_SETTING -> {
+                                                val setting = accept.value?.jsonObject
+                                                val name = setting?.get("setting_name")?.jsonPrimitive?.contentOrNull
+                                                when (setting?.get("value_type")?.jsonPrimitive?.contentOrNull) {
+                                                    "boolean" -> setting["value"]?.jsonPrimitive?.booleanOrNull?.let {
+                                                        settings.putBoolean(name!!, it)
+                                                    }
+                                                    "string" -> setting["value"]?.jsonPrimitive?.contentOrNull?.let {
+                                                        settings.putString(name!!, it)
+                                                    }
+                                                    "int" -> setting["value"]?.jsonPrimitive?.intOrNull?.let {
+                                                        settings.putInt(name!!, it)
+                                                    }
+                                                }
+                                            }
+                                            else -> userMessages.showShortMessage("当前版本不支持此通知操作")
+                                        }
+                                    },
+                                    dismiss = { Text(notification.dismiss) },
+                                    onDismiss = markRead,
+                                )
+                            }
+                        }
+                        // 作者动态公告
+                        authorPinAnnouncements.forEach { announcement ->
+                            item(announcement.pinId) {
                                 AnnouncementCard(
                                     modifier = Modifier.testTag(homeAuthorPollAnnouncementTag(announcement.pinId)),
                                     visible = true,
@@ -626,6 +699,9 @@ fun HomeScreen(
                                     },
                                 )
                             }
+                        }
+                        // 首次打开提示
+                        item {
                             AnnouncementCard(
                                 visible = showFilterExplainDialog,
                                 title = "为什么有的内容突然消失了？",

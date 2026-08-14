@@ -20,6 +20,8 @@ package com.chloemlla.zhplus.viewmodel.feed
 import com.chloemlla.zhplus.shared.data.CommonFeed
 import com.chloemlla.zhplus.shared.data.Feed
 import com.chloemlla.zhplus.shared.data.Person
+import com.chloemlla.zhplus.shared.data.SearchResult
+import com.chloemlla.zhplus.shared.data.ZhihuJson
 import com.chloemlla.zhplus.shared.data.target
 import com.chloemlla.zhplus.viewmodel.PaginationEnvironment
 import io.ktor.client.HttpClient
@@ -74,6 +76,39 @@ class SearchViewModelTest {
                     ?.id
             },
         )
+    }
+
+    @Test
+    fun decodesPeopleSearchResultAsStronglyTypedPeople() {
+        val result = ZhihuJson.decodeJson<SearchResult>(
+            ZhihuJson.json.parseToJsonElement(
+                """
+                {
+                  "type": "search_result",
+                  "id": 460104019,
+                  "object": {
+                    "id": "6733f12c60e7e98ea7491f20de46f79e",
+                    "url_token": "zhouyuan",
+                    "type": "people",
+                    "url": "https://api.zhihu.com/people/6733f12c60e7e98ea7491f20de46f79e",
+                "name": "<em>周源</em>",
+                    "user_type": "people",
+                    "headline": "知乎 001 号员工",
+                    "gender": 1,
+                    "avatar_url": "https://pic.example/avatar.jpg",
+                    "follower_count": 1048300,
+                    "answer_count": 371
+                  }
+                }
+                """.trimIndent(),
+            ),
+        )
+
+        assertEquals("zhouyuan", result.people?.people?.urlToken)
+        assertEquals("周源", result.people?.people?.name)
+        assertEquals("<em>周源</em>", result.people?.highlightedName)
+        assertEquals(1048300, result.people?.people?.followerCount)
+        assertNull(result.toFeed())
     }
 
     private class TestSearchViewModel : SearchViewModel("query") {

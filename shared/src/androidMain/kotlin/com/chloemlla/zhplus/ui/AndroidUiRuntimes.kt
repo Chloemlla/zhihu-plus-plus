@@ -158,6 +158,7 @@ actual fun rememberMainTabSelector(): (TopLevelDestination) -> Unit {
 
 fun AccountData.Data.toAccountSettingsAccountState(): AccountSettingsAccountState = AccountSettingsAccountState(
     login = login,
+    hasRequiredCookie = cookies["d_c0"].isNullOrBlank().not(),
     username = username,
     avatarUrl = self?.avatarUrl,
     id = self?.id ?: "",
