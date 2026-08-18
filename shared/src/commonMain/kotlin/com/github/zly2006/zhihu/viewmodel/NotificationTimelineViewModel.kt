@@ -233,7 +233,16 @@ class PrivateMessageViewModel(
                     page.data.filter { existingIds.add(it.stableId) },
                     rawData,
                 )
-                lastPaging = page.paging
+                val p = page.paging
+                lastPaging = com.github.zly2006.zhihu.shared.data.ZhihuPaging(
+                    page = p.page,
+                    isEnd = p.isEnd,
+                    isStart = p.isStart,
+                    previous = p.previous,
+                    totals = p.totals,
+                    next = p.next,
+                    prev = p.prev,
+                )
 
                 peerRequest?.let { request ->
                     runCatching {
