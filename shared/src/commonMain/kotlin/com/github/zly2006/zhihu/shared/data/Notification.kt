@@ -79,6 +79,8 @@ data class MobileNotificationTimelineItem(
     val content: MobileNotificationContent? = null,
     val targetSource: MobileNotificationTargetSource? = null,
     val target: MobileNotificationTarget? = null,
+    val emptyInfo: MobileNotificationEmptyInfo? = null,
+    val additionalInfo: List<MobileNotificationAdditionalInfo> = emptyList(),
 ) {
     val stableId: String
         get() = uniqueId.ifBlank { id.ifBlank { "$created-$cardType-$detailTitle" } }
@@ -90,6 +92,12 @@ data class MobileNotificationHead(
     val avatarUrl: String = "",
     val targetLink: String = "",
     val avatarUrls: List<String> = emptyList(),
+    val labels: List<MobileNotificationLabel> = emptyList(),
+)
+
+@Serializable
+data class MobileNotificationLabel(
+    val text: String = "",
 )
 
 @Serializable
@@ -135,10 +143,27 @@ data class MobileNotificationTarget(
     val id: String = "",
     val type: String = "",
     val name: String = "",
+    val title: String = "",
     val urlToken: String = "",
     val headline: String = "",
     val avatarUrl: String = "",
     val url: String = "",
+    val myAnswerUrl: String = "",
+    val hasAnswer: Boolean = false,
+    val followNum: Int = 0,
+)
+
+@Serializable
+data class MobileNotificationEmptyInfo(
+    val text: String = "",
+    val number: Int = 0,
+)
+
+@Serializable
+data class MobileNotificationAdditionalInfo(
+    val id: Int = 0,
+    val text: String = "",
+    val icon: String = "",
 )
 
 object NotificationActorsSerializer : KSerializer<List<NotificationActor>> {
