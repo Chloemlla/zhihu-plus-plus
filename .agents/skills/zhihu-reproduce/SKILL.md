@@ -98,7 +98,7 @@ https://www.zhihu.com/api/v4/comment_v5/{contentType}/{contentId}/root_comment
 
 ### 官方 Android 客户端 AVD 验证
 
-当任务要复刻知乎官方 Android 客户端的 UI 或交互，或者用户明确要求核对官方客户端时，必须在 AVD 中打开真正的官方应用完成验证，不能用 Web 页面、API 返回或 Zhihu++ 自身界面代替。验证前先记录 AVD 名称和 Android API 级别，再通过包管理器确认包名为 `com.zhihu.android` 并记录 `versionName`、`versionCode`；同时排除 `com.chloemlla.zhplus` 及其变体，避免把被测应用误认成官方客户端。
+当任务要复刻知乎官方 Android 客户端的 UI 或交互，或者用户明确要求核对官方客户端时，必须在 AVD 中打开真正的官方应用完成验证，不能用 Web 页面、API 返回或 Zhihu++ 自身界面代替。验证前先记录 AVD 名称和 Android API 级别，再通过包管理器确认包名为 `com.zhihu.android` 并记录 `versionName`、`versionCode`；同时排除 `com.github.zly2006.zhihu` 及其变体，避免把被测应用误认成官方客户端。
 
 官方客户端验证必须记录以下证据：
 

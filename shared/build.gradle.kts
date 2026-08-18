@@ -72,7 +72,7 @@ kotlin {
     }
 
     android {
-        namespace = "com.chloemlla.zhplus.shared"
+        namespace = "com.github.zly2006.zhihu.shared"
         compileSdk = 37
         minSdk = 27
 

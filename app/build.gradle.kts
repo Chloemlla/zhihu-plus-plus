@@ -69,17 +69,17 @@ aboutLibraries {
 }
 
 android {
-    namespace = "com.chloemlla.zhplus"
+    namespace = "com.github.zly2006.zhihu"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.chloemlla.zhplus"
+        applicationId = "com.github.zly2006.zhihu"
         minSdk = 27
         targetSdk = 35
         versionCode = resolveVersionCode()
         versionName = resolveVersionName()
 
-        testInstrumentationRunner = "com.chloemlla.zhplus.ZhihuInstrumentedTestRunner"
+        testInstrumentationRunner = "com.github.zly2006.zhihu.ZhihuInstrumentedTestRunner"
     }
 
     flavorDimensions += "version"

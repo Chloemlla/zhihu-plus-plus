@@ -6,8 +6,8 @@ echo "🔨 Building lite debug APK..."
 ./gradlew assembleLiteDebug --quiet
 
 APK_PATH="./app/build/outputs/apk/lite/debug/app-lite-debug.apk"
-PACKAGE_NAME="com.chloemlla.zhplus.lite"
-ACTIVITY="com.chloemlla.zhplus.MainActivity"
+PACKAGE_NAME="com.github.zly2006.zhihu.lite"
+ACTIVITY="com.github.zly2006.zhihu.MainActivity"
 
 # Check if APK was built
 if [ ! -f "$APK_PATH" ]; then

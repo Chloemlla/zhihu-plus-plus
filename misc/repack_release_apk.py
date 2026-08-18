@@ -5,7 +5,7 @@ Example:
     python3 misc/repack_release_apk.py \
         --tag 0.23.4 \
         --asset 'zhihu++-lite.apk' \
-        --new-package com.chloemlla.zhplus.lite.release
+        --new-package com.github.zly2006.zhihu.lite.release
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from typing import Any
 
 DEFAULT_REPO = "Chloemlla/zhihu-plus-plus"
 DEFAULT_ASSET = "zhihu++-lite.apk"
-DEFAULT_NEW_PACKAGE = "com.chloemlla.zhplus.lite.release"
+DEFAULT_NEW_PACKAGE = "com.github.zly2006.zhihu.lite.release"
 DEFAULT_APKTOOL_VERSION = "v3.0.2"
 DEFAULT_APKTOOL_ASSET = "apktool_3.0.2.jar"
 
