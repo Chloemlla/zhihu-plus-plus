@@ -17,10 +17,10 @@
 
 package com.github.zly2006.zhihu.util
 
+import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.data.SegmentInfoMark
 import com.github.zly2006.zhihu.data.SegmentInfoMeta
 import com.github.zly2006.zhihu.data.SegmentInfoParagraph
-import com.fleeksoft.ksoup.Ksoup
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
