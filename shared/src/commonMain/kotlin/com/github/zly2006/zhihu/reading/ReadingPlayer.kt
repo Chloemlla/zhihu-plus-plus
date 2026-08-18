@@ -32,7 +32,7 @@ import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.NavDestination
 import com.github.zly2006.zhihu.navigation.Pin
 import com.github.zly2006.zhihu.navigation.Question
-import com.github.zly2006.zhihu.platform.SettingsStore
+import com.github.zly2006.zhihu.shared.platform.SettingsStore
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
@@ -191,7 +191,6 @@ data class ReadingQueueItem(
         )
         ReadingContentType.Pin -> Pin(
             id = id,
-            authorName = author,
             readingQueueSourceId = sourceId,
         )
         ReadingContentType.Question -> Question(
@@ -678,7 +677,7 @@ fun FeedDisplayItem.toReadingQueueItem(): ReadingQueueItem? {
             is Pin -> ReadingQueueItem(
                 contentType = ReadingContentType.Pin,
                 id = destination.id,
-                author = authorName.cleanReadingMetadata().ifBlank { destination.authorName.cleanReadingMetadata() },
+                author = authorName.cleanReadingMetadata(),
             )
             is Question -> ReadingQueueItem(
                 contentType = ReadingContentType.Question,

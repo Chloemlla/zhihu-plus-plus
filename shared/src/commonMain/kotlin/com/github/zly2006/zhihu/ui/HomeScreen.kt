@@ -232,6 +232,7 @@ fun HomeScreen(
 
     val requestLogin = rememberHomeLoginRequester()
     val account = rememberAccountSettingsAccountState().value
+    val homeAccountState = rememberHomeAccountState()
     if (account.login && !account.hasRequiredCookie) {
         AlertDialog(
             onDismissRequest = {},
@@ -336,8 +337,8 @@ fun HomeScreen(
     }
 
     // 初始加载
-    LaunchedEffect(currentRecommendationMode, account.isLoggedIn, autoRefreshOnStartup) {
-        if (!account.isLoggedIn &&
+    LaunchedEffect(currentRecommendationMode, homeAccountState.isLoggedIn, autoRefreshOnStartup) {
+        if (!homeAccountState.isLoggedIn &&
             settings.getBoolean("loginForRecommendation", true)
         ) {
             requestLogin()

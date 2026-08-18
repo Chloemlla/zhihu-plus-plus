@@ -77,19 +77,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.data.MobileNotificationColumnHead
-import com.github.zly2006.zhihu.data.MobileNotificationTimelineItem
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.NavDestination
 import com.github.zly2006.zhihu.navigation.Notification
 import com.github.zly2006.zhihu.navigation.Person
 import com.github.zly2006.zhihu.navigation.resolveContent
-import com.github.zly2006.zhihu.notification.NotificationSettingsStore
-import com.github.zly2006.zhihu.notification.rememberNotificationSettingsStore
-import com.github.zly2006.zhihu.platform.rememberExternalUrlOpener
-import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.shared.data.MobileNotificationTimelineItem
+import com.github.zly2006.zhihu.shared.notification.NotificationSettingsStore
+import com.github.zly2006.zhihu.shared.notification.rememberNotificationSettingsStore
+import com.github.zly2006.zhihu.shared.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.shared.util.formatRelativeTime
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
-import com.github.zly2006.zhihu.util.formatRelativeTime
 import com.github.zly2006.zhihu.viewmodel.MobileNotificationCategory
 import com.github.zly2006.zhihu.viewmodel.NotificationEnvironment
 import com.github.zly2006.zhihu.viewmodel.NotificationViewModel
@@ -184,16 +183,19 @@ fun NotificationScreen() {
                             },
                         )
                     }
-                    viewModel.invitation?.let { invitation ->
-                        item(key = "notification_invitation") {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                            NotificationInvitationRow(
-                                invitation = invitation,
-                                showUnreadBadge = settingsStore.getUnreadBadgeEnabled(),
-                                onClick = { navigator.onNavigate(Notification.Invitations) },
-                            )
-                        }
-                    }
+                    // 邀请回答入口暂时停用：fork 的 NotificationViewModel 尚未提供 invitation 数据
+                    // （上游 #620 通过 MobileNotificationMessageOverview.columnHead 提供，fork 的 viewmodel 未合入该改动）。
+                    // 待 viewmodel 补齐 columnHead 解析后可恢复以下块。
+                    // viewModel.invitation?.let { invitation ->
+                    //     item(key = "notification_invitation") {
+                    //         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                    //         NotificationInvitationRow(
+                    //             invitation = invitation,
+                    //             showUnreadBadge = settingsStore.getUnreadBadgeEnabled(),
+                    //             onClick = { navigator.onNavigate(Notification.Invitations) },
+                    //         )
+                    //     }
+                    // }
                     item(key = "notification_messages_divider") {
                         HorizontalDivider(
                             thickness = 8.dp,
@@ -467,21 +469,13 @@ fun NotificationItemView(
                             append(Ksoup.parse(notification.content.subText).text())
                         }
                     } else if (notification.content?.subTitle?.contains("评论了") == true) {
-                        val document = Ksoup.parseBodyFragment(notification.content.abstractText)
-                        val openExternalUrl = rememberExternalUrlOpener()
-                        val string = remember(notification.content.abstractText) {
-                            emojisUsed.clear()
+                        // CommentScreen.kt 的 dfsSimple 是 private，无法在这里复用，退回纯文本提取。
+                        // 评论里的链接与 emoji 内联高亮不再渲染，仅保留可读文本。
+                        remember(notification.content.abstractText) {
                             buildAnnotatedString {
-                                dfsSimple(
-                                    node = document.body(),
-                                    onNavigate = navigator.onNavigate,
-                                    openExternalUrl = openExternalUrl,
-                                    componentUsed = emojisUsed,
-                                )
+                                append(Ksoup.parse(notification.content.abstractText).text())
                             }
                         }
-
-                        string
                     } else {
                         buildAnnotatedString {
                             append(Ksoup.parse(notification.content?.text.orEmpty()).text())

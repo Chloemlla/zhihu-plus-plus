@@ -105,6 +105,7 @@ import com.github.zly2006.zhihu.ui.components.FeedCard
 import com.github.zly2006.zhihu.ui.components.FeedPullToRefresh
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
+import com.github.zly2006.zhihu.ui.components.rememberFeedBlockActions
 import com.github.zly2006.zhihu.util.parseEmphasizedHtmlTextWithTheme
 import com.github.zly2006.zhihu.viewmodel.PaginationEnvironment
 import com.github.zly2006.zhihu.viewmodel.feed.SearchContentType
@@ -162,6 +163,7 @@ fun SearchScreen(
     val userMessages = rememberUserMessageSink()
     val settings = rememberSettingsStore()
     val viewModel = viewModel { SearchViewModel(search.query, search.restrictedMemberHashId) }
+    val feedBlockActions = rememberFeedBlockActions()
     val readingQueueSourceId = buildString {
         append("search:")
         append(search.restrictedMemberHashId)
@@ -715,17 +717,12 @@ fun SearchScreen(
                             is SearchEntity.Content -> FeedCard(
                                 item = result.item,
                                 modifier = Modifier.testTag("search_general_content_${result.id}"),
-                                readingQueueSourceId = readingQueueSourceId,
                                 menuItems = { dismissMenu ->
                                     DropdownMenuItem(
                                         text = { Text("屏蔽用户") },
                                         onClick = {
                                             dismissMenu()
-                                            viewModel.handleBlockUser(
-                                                paginationEnvironment,
-                                                userMessages,
-                                                result.item,
-                                            ) { authorInfo ->
+                                            feedBlockActions.handleBlockUser(viewModel, result.item) { authorInfo ->
                                                 feedAuthorBlockRequest = FeedAuthorBlockRequest(
                                                     FeedAuthorBlockType.CONTENT_AUTHOR,
                                                     authorInfo.first,

@@ -112,7 +112,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -136,6 +135,7 @@ import com.github.zly2006.zhihu.shared.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.shared.ui.AnswerDoubleTapAction
 import com.github.zly2006.zhihu.shared.util.formatCompactCount
 import com.github.zly2006.zhihu.theme.ThemeManager
+import com.github.zly2006.zhihu.ui.article.CachedAnswerPreview
 import com.github.zly2006.zhihu.ui.components.AnswerHorizontalOverscroll
 import com.github.zly2006.zhihu.ui.components.AnswerVerticalOverscroll
 import com.github.zly2006.zhihu.ui.components.AuthorBadge
@@ -150,7 +150,6 @@ import com.github.zly2006.zhihu.ui.components.rememberPreferCollapsedExitUntilCo
 import com.github.zly2006.zhihu.ui.components.rememberShareDialogRuntime
 import com.github.zly2006.zhihu.util.smoothGradient
 import com.github.zly2006.zhihu.viewmodel.ArticleViewModel
-import com.github.zly2006.zhihu.viewmodel.ArticleViewModel.CachedAnswerContent
 import com.github.zly2006.zhihu.viewmodel.addReadHistory
 import com.github.zly2006.zhihu.viewmodel.formatArticleDateTime
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
@@ -2117,169 +2116,6 @@ fun ArticleScreen(
             viewModel.exportToImageWithComments(environment, commentCount, includeAppAttribution, onComplete)
         },
     )
-}
-
-/**
- * 渲染缓存的回答完整内容，用于水平滑动预览。
- *
- * 内容来自 [CachedAnswerContent]，包含标题、作者信息、投票/评论计数和 HTML 正文。正文使用 Compose Markdown，
- * 因此这里是轻量预览，不持有 WebView 或答案切换共享状态。
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CachedAnswerPreview(
-    cached: CachedAnswerContent,
-) {
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .background(
-                color = MaterialTheme.colorScheme.background,
-                shape = RectangleShape,
-            ),
-        topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background),
-            ) {
-                Text(
-                    text = cached.title,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    lineHeight = 32.sp,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-            }
-        },
-        bottomBar = {
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(36.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(color = Color(0xFF40B6F6)),
-                        horizontalArrangement = Arrangement.Start,
-                    ) {
-                        Button(
-                            onClick = {},
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF40B6F6),
-                                contentColor = Color.Black,
-                            ),
-                            shape = RectangleShape,
-                            contentPadding = PaddingValues(horizontal = 0.dp),
-                        ) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(painterResource(Res.drawable.ic_vote_up_24dp), "赞同")
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(text = cached.voteUpCount.toString())
-                        }
-                    }
-                    Button(
-                        onClick = {},
-                        contentPadding = PaddingValues(horizontal = 8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        ),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Comment, contentDescription = "评论")
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = "${cached.commentCount}")
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    start = innerPadding.calculateStartPadding(LocalLayoutDirection.current),
-                    end = innerPadding.calculateEndPadding(LocalLayoutDirection.current),
-                ),
-        ) {
-            Spacer(modifier = Modifier.height(innerPadding.calculateTopPadding()))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (cached.authorAvatarUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = cached.authorAvatarUrl,
-                        contentDescription = "作者头像",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape),
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(Color.LightGray),
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = cached.authorName,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (cached.authorBadge != null) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            AuthorBadge(
-                                badge = cached.authorBadge,
-                            )
-                        }
-                    }
-                    if (cached.authorBio.isNotEmpty()) {
-                        Text(
-                            text = cached.authorBio,
-                            fontSize = 12.sp,
-                            color = Color.Gray,
-                        )
-                    }
-                }
-            }
-            if (cached.endorsements.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    cached.endorsements.forEach { endorsement ->
-                        AnswerEndorsementChip(endorsement)
-                    }
-                }
-            }
-            if (cached.content.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                RenderMarkdown(
-                    html = cached.content,
-                    modifier = Modifier,
-                    selectable = true,
-                    enableScroll = false,
-                    header = {},
-                    footer = {},
-                )
-            }
-            Spacer(modifier = Modifier.height((16 + 36).dp))
-        }
-    }
 }
 
 @Serializable

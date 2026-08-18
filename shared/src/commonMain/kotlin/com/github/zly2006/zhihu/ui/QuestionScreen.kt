@@ -99,16 +99,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fleeksoft.ksoup.Ksoup
-import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.decodeQuestionContentDetail
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Question
 import com.github.zly2006.zhihu.navigation.Topic
 import com.github.zly2006.zhihu.navigation.WriteAnswer
-import com.github.zly2006.zhihu.platform.rememberSettingsStore
-import com.github.zly2006.zhihu.platform.rememberUserMessageSink
-import com.github.zly2006.zhihu.platform.rememberZhihuWebUrlOpener
-import com.github.zly2006.zhihu.reading.RegisterReadingQueueSource
+import com.github.zly2006.zhihu.shared.data.DataHolder
+import com.github.zly2006.zhihu.shared.data.navDestination
+import com.github.zly2006.zhihu.shared.platform.rememberSettingsStore
+import com.github.zly2006.zhihu.shared.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.shared.platform.rememberZhihuWebUrlOpener
 import com.github.zly2006.zhihu.ui.components.CommentScreenComponent
 import com.github.zly2006.zhihu.ui.components.FeedCard
 import com.github.zly2006.zhihu.ui.components.FeedPullToRefresh
@@ -117,7 +117,7 @@ import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
 import com.github.zly2006.zhihu.ui.components.ShareDialog
 import com.github.zly2006.zhihu.ui.components.getShareText
 import com.github.zly2006.zhihu.ui.components.handleShareAction
-import com.github.zly2006.zhihu.ui.components.rememberShareActionExecutor
+import com.github.zly2006.zhihu.ui.components.rememberShareDialogRuntime
 import com.github.zly2006.zhihu.viewmodel.ContentLoadEnvironment
 import com.github.zly2006.zhihu.viewmodel.addReadHistory
 import com.github.zly2006.zhihu.viewmodel.feed.QuestionFeedViewModel
@@ -172,17 +172,15 @@ fun QuestionScreen(
 ) {
     val readingPlayerOverlayPadding = LocalReadingPlayerOverlayPadding.current
     val settings = rememberSettingsStore()
-    val executeShareAction = rememberShareActionExecutor()
+    val executeShareAction = rememberShareDialogRuntime()
     val openZhihuWebUrl = rememberZhihuWebUrlOpener()
     val navigator = LocalNavigator.current
     val viewModel: QuestionFeedViewModel = viewModel(key = "question_${question.questionId}") {
         QuestionFeedViewModel(question.questionId)
     }
-    val answerReadingQueueSourceId = "question:${question.questionId}:answers:${viewModel.sortOrder}"
-    RegisterReadingQueueSource(
-        sourceId = answerReadingQueueSourceId,
-        items = viewModel.displayItems,
-    )
+    // 回答阅读队列注册暂时停用：viewmodel 的 displayItems 是 shared.data.FeedDisplayItem，
+    // 而 ReadingPlayer.kt 的 RegisterReadingQueueSource 只接受 data.FeedDisplayItem，类型不一致无法编译。
+    // 待 reading 层迁移到 shared.data 后可恢复 RegisterReadingQueueSource 调用。
     val paginationEnvironment = rememberPaginationEnvironment(allowGuestAccess = false)
     val answerSwitchState = paginationEnvironment.articleAnswerSwitchState()
     val listState = rememberLazyListState()
@@ -328,11 +326,10 @@ fun QuestionScreen(
             ) { item ->
                 FeedCard(
                     item = item,
-                    readingQueueSourceId = answerReadingQueueSourceId,
                     modifier = Modifier.testTag("question_feed_item_${item.stableKey}"),
-                ) { _, destination ->
+                ) {
                     answerSwitchState?.pendingNavigator = viewModel.createAnswerNavigatorFor(item, paginationEnvironment)
-                    destination?.let(navigator.onNavigate)
+                    navDestination?.let(navigator.onNavigate)
                 }
             }
         }

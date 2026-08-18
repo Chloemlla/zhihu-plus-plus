@@ -120,6 +120,9 @@ data object Account : TopLevelDestination {
     ) : NavDestination
 
     @Serializable
+    data object ReadingSettings : NavDestination
+
+    @Serializable
     data class RecommendSettings(
         val setting: String = "",
     ) : NavDestination {

@@ -49,7 +49,6 @@ import com.github.zly2006.zhihu.ui.subscreens.DUO3_TIQIAN_MARKDOWN_PREFERENCE_KE
 import com.github.zly2006.zhihu.ui.subscreens.SystemUpdateState
 import com.github.zly2006.zhihu.ui.subscreens.desktopSystemUpdateState
 import com.github.zly2006.zhihu.viewmodel.DesktopPaginationEnvironment
-import com.github.zly2006.zhihu.viewmodel.NotificationViewModel
 import com.github.zly2006.zhihu.viewmodel.filter.desktopContentFilterDatabaseFile
 import com.github.zly2006.zhihu.viewmodel.filter.encodeBlocklistBackup
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
@@ -480,7 +479,6 @@ actual fun supportsZhihuHtmlWebView(): Boolean = false
 
 @Composable
 actual fun rememberNotificationEnvironment(
-    viewModel: NotificationViewModel,
     settingsStore: NotificationSettingsStore,
 ): com.github.zly2006.zhihu.viewmodel.NotificationEnvironment {
     val userMessages = rememberUserMessageSink()
