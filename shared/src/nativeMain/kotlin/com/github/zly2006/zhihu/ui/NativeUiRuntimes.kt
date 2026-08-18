@@ -61,9 +61,6 @@ actual fun rememberNotificationEnvironment(
     IosNotificationEnvironment(settingsStore)
 }
 
-@Composable
-actual fun rememberNotificationShowDebugCopy(): Boolean = false
-
 private class IosNotificationEnvironment(
     override val notificationSettingsStore: NotificationSettingsStore,
 ) : NotificationEnvironment {

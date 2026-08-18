@@ -538,12 +538,6 @@ actual fun rememberNotificationEnvironment(
     }
 }
 
-@Composable
-actual fun rememberNotificationShowDebugCopy(): Boolean {
-    val context = LocalContext.current
-    return (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-}
-
 interface ArticlePreviewWebViewStore {
     fun getOrCreatePreviewWebView(
         context: Context,

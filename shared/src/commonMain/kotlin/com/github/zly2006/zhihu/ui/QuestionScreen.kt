@@ -104,6 +104,7 @@ import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Question
 import com.github.zly2006.zhihu.navigation.Topic
 import com.github.zly2006.zhihu.navigation.WriteAnswer
+import com.github.zly2006.zhihu.reading.RegisterReadingQueueSource
 import com.github.zly2006.zhihu.shared.data.DataHolder
 import com.github.zly2006.zhihu.shared.data.navDestination
 import com.github.zly2006.zhihu.shared.platform.rememberSettingsStore
@@ -178,9 +179,11 @@ fun QuestionScreen(
     val viewModel: QuestionFeedViewModel = viewModel(key = "question_${question.questionId}") {
         QuestionFeedViewModel(question.questionId)
     }
-    // 回答阅读队列注册暂时停用：viewmodel 的 displayItems 是 shared.data.FeedDisplayItem，
-    // 而 ReadingPlayer.kt 的 RegisterReadingQueueSource 只接受 data.FeedDisplayItem，类型不一致无法编译。
-    // 待 reading 层迁移到 shared.data 后可恢复 RegisterReadingQueueSource 调用。
+    val answerReadingQueueSourceId = "question:${question.questionId}:answers:${viewModel.sortOrder}"
+    RegisterReadingQueueSource(
+        sourceId = answerReadingQueueSourceId,
+        items = viewModel.displayItems,
+    )
     val paginationEnvironment = rememberPaginationEnvironment(allowGuestAccess = false)
     val answerSwitchState = paginationEnvironment.articleAnswerSwitchState()
     val listState = rememberLazyListState()

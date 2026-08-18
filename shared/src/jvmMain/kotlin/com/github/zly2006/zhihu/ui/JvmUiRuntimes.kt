@@ -493,9 +493,6 @@ actual fun rememberNotificationEnvironment(
 }
 
 @Composable
-actual fun rememberNotificationShowDebugCopy(): Boolean = true
-
-@Composable
 actual fun rememberZhihuHttpClient(): HttpClient {
     val store = remember { DesktopAccountStore() }
     return store.httpClient()
