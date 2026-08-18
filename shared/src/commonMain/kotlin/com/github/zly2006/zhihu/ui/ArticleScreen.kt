@@ -127,6 +127,7 @@ import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Question
+import com.github.zly2006.zhihu.navigation.Topic
 import com.github.zly2006.zhihu.shared.data.DataHolder
 import com.github.zly2006.zhihu.shared.data.Person
 import com.github.zly2006.zhihu.shared.data.ZhihuPaging
@@ -1736,6 +1737,21 @@ fun ArticleScreen(
                         }
 
                         if (viewModel.content.isNotEmpty() || viewModel.attachment != null) {
+                            if (article.type == ArticleType.Article && viewModel.topics.isNotEmpty()) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    viewModel.topics.forEach { topic ->
+                                        androidx.compose.material3.FilterChip(
+                                            selected = false,
+                                            onClick = { navigator.onNavigate(Topic(topic.id, topic.name)) },
+                                            label = { Text("# ${topic.name}") },
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(12.dp))
+                            }
                             val hasPinnedDate = pinAnswerDate
                             val hasSocialCredit = viewModel.votersTotal > 0 || viewModel.aigcSupportVoterCount > 0
                             val endorsements = viewModel.endorsements
@@ -1801,6 +1817,7 @@ fun ArticleScreen(
                                     scrollState = scrollState,
                                     selectable = true,
                                     enableScroll = false,
+                                    useTiqianRenderer = articleSettings.useTiqianMarkdown,
                                     header = {},
                                     footer = {
                                         ArticleVideoAttachmentContent(viewModel.attachment)
@@ -1877,10 +1894,10 @@ fun ArticleScreen(
                 onNavigatePrevious = navigateToPrevious,
                 onNavigateNext = navigateToNext,
                 previousContent = nav?.previousAnswer?.let { cached ->
-                    { CachedAnswerPreview(cached) }
+                    { CachedAnswerPreview(cached, articleSettings.useTiqianMarkdown) }
                 },
                 nextContent = nav?.nextAnswer?.let { cached ->
-                    { CachedAnswerPreview(cached) }
+                    { CachedAnswerPreview(cached, articleSettings.useTiqianMarkdown) }
                 },
                 answerSwitchSensitivity = answerSwitchSensitivity,
             ) {

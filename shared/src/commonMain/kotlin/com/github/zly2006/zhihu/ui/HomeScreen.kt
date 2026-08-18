@@ -147,6 +147,8 @@ import com.github.zly2006.zhihu.ui.subscreens.DEFAULT_FAB_OPACITY
 import com.github.zly2006.zhihu.ui.subscreens.PREF_FAB_OPACITY
 import com.github.zly2006.zhihu.ui.subscreens.SystemUpdateState
 import com.github.zly2006.zhihu.ui.subscreens.rememberSystemUpdateRuntime
+import com.github.zly2006.zhihu.viewmodel.QUALITY_FILTER_MODE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.viewmodel.QualityFilterMode
 import com.github.zly2006.zhihu.viewmodel.feed.BaseFeedViewModel
 import com.github.zly2006.zhihu.viewmodel.feed.HomeFeedInteractionViewModel
 import com.github.zly2006.zhihu.viewmodel.feed.HomeFeedViewModel
@@ -318,6 +320,18 @@ fun HomeScreen(
     LaunchedEffect(latestLoadedDisplayItems) {
         if (latestLoadedDisplayItems.isNotEmpty()) {
             startupCache.writeHomeFeedStartupCache(latestLoadedDisplayItems)
+        }
+    }
+
+    val completedPageCount = viewModel.completedPageCount
+    LaunchedEffect(completedPageCount) {
+        if (completedPageCount > 0 &&
+            currentRecommendationMode == RecommendationMode.WEB &&
+            settings.getString(QUALITY_FILTER_MODE_PREFERENCE_KEY, QualityFilterMode.RULES.name) == QualityFilterMode.HIDE.name &&
+            viewModel.displayItems.isEmpty() &&
+            !viewModel.isEnd
+        ) {
+            viewModel.loadMore(paginationEnvironment)
         }
     }
 
@@ -977,7 +991,7 @@ fun HomeScreen(
                                 },
                                 onClick = {
                                     showCreateMenu = false
-                                    navigator.onNavigate(WritePin)
+                                    navigator.onNavigate(WritePin())
                                 },
                             )
                         }

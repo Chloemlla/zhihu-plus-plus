@@ -213,15 +213,6 @@ internal fun zhihuFollowingUpvoteRecommendUrl(
         }
     }
 
-internal fun createLocalFeedDisplayItem(entry: LocalRecommendationEntry): FeedDisplayItem = FeedDisplayItem(
-    title = entry.feed.title,
-    summary = entry.feed.summary,
-    details = entry.feed.reasonDisplay,
-    feed = null,
-    navDestinationJson = entry.navDestination?.toFeedDisplayItemNavDestinationJson(),
-    isFiltered = false,
-)
-
 internal suspend fun cleanupLocalRecommendationData(
     dao: LocalContentDao,
     nowMillis: Long = Clock.System.now().toEpochMilliseconds(),
@@ -412,7 +403,7 @@ internal fun rankCandidate(
     )
 }
 
-internal suspend fun toRecommendationEntry(
+private suspend fun toRecommendationEntry(
     rankedResult: RankedLocalResult,
     feedGenerator: FeedGenerator,
 ): LocalRecommendationEntry? {
