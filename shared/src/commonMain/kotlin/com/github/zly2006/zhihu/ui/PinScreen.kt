@@ -72,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.data.decodePinContentDetail
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
@@ -103,7 +104,6 @@ import com.github.zly2006.zhihu.viewmodel.nextUrlOrNull
 import com.github.zly2006.zhihu.viewmodel.postSigned
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
 import com.github.zly2006.zhihu.viewmodel.replaceOrAppendUniqueVoters
-import com.fleeksoft.ksoup.Ksoup
 import io.ktor.client.call.body
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType

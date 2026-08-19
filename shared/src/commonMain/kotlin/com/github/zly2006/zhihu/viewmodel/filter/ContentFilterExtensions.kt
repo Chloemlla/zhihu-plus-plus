@@ -17,6 +17,7 @@
 
 package com.github.zly2006.zhihu.viewmodel.filter
 
+import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.NavDestination
 import com.github.zly2006.zhihu.navigation.Pin
@@ -28,7 +29,6 @@ import com.github.zly2006.zhihu.shared.data.questionAuthor
 import com.github.zly2006.zhihu.shared.data.target
 import com.github.zly2006.zhihu.shared.filter.ContentOpenEventSupport
 import com.github.zly2006.zhihu.shared.platform.SettingsStore
-import com.fleeksoft.ksoup.Ksoup
 import kotlinx.serialization.json.Json
 
 class ForegroundReadFilterPipeline(

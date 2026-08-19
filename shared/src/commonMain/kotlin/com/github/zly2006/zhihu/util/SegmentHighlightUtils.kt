@@ -17,14 +17,14 @@
 
 package com.github.zly2006.zhihu.util
 
-import com.github.zly2006.zhihu.data.SegmentInfoMark
-import com.github.zly2006.zhihu.data.SegmentInfoMeta
-import com.github.zly2006.zhihu.data.SegmentInfoParagraph
-import com.github.zly2006.zhihu.data.effectiveSegInfo
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Element
 import com.fleeksoft.ksoup.nodes.Node
 import com.fleeksoft.ksoup.nodes.TextNode
+import com.github.zly2006.zhihu.data.SegmentInfoMark
+import com.github.zly2006.zhihu.data.SegmentInfoMeta
+import com.github.zly2006.zhihu.data.SegmentInfoParagraph
+import com.github.zly2006.zhihu.data.effectiveSegInfo
 
 data class SegmentHighlightSpan(
     val text: String,

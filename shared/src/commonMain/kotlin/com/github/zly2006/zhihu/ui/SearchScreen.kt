@@ -710,7 +710,6 @@ fun SearchScreen(
                             }
                         },
                         footer = ProgressIndicatorFooter,
-
                         key = SearchEntity::id,
                     ) { result ->
                         when (result) {
@@ -741,7 +740,6 @@ fun SearchScreen(
                                         person.urlToken.orEmpty(),
                                         person.name.replace("<em>", "").replace("</em>", ""),
                                     ),
-
                                 )
                             }
                             is SearchEntity.Topic -> Unit

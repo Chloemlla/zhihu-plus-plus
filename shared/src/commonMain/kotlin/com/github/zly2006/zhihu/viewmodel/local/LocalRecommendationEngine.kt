@@ -20,9 +20,7 @@ package com.github.zly2006.zhihu.viewmodel.local
 import com.github.zly2006.zhihu.navigation.NavDestination
 import com.github.zly2006.zhihu.shared.data.CommonFeed
 import com.github.zly2006.zhihu.shared.data.Feed
-import com.github.zly2006.zhihu.shared.data.FeedDisplayItem
 import com.github.zly2006.zhihu.shared.data.target
-import com.github.zly2006.zhihu.shared.data.toFeedDisplayItemNavDestinationJson
 import com.github.zly2006.zhihu.shared.recommendation.LocalReasonPreference
 import com.github.zly2006.zhihu.shared.recommendation.applyReasonDiversity
 import com.github.zly2006.zhihu.shared.recommendation.buildLocalRecommendationReason
