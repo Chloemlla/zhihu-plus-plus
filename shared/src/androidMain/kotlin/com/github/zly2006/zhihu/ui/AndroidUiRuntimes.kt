@@ -529,12 +529,11 @@ actual fun Modifier.commentSelectionWorkaround(): Modifier = fuckHonorService()
 
 @Composable
 actual fun rememberNotificationEnvironment(
-    viewModel: NotificationViewModel,
     settingsStore: NotificationSettingsStore,
 ): com.github.zly2006.zhihu.viewmodel.NotificationEnvironment {
     val context = LocalContext.current
-    return remember(context, settingsStore, viewModel) {
-        viewModel.notificationEnvironment(context, settingsStore)
+    return remember(context, settingsStore) {
+        SharedAndroidNotificationEnvironment(context, false, settingsStore)
     }
 }
 
