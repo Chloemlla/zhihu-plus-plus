@@ -60,11 +60,9 @@ import com.github.zly2006.zhihu.util.EmojiManager
 import com.github.zly2006.zhihu.util.OpenInBrowser
 import com.github.zly2006.zhihu.util.createEmojiInlineContent
 import com.github.zly2006.zhihu.util.fuckHonorService
-import com.github.zly2006.zhihu.viewmodel.NotificationViewModel
 import com.github.zly2006.zhihu.viewmodel.filter.encodeBlocklistBackup
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.importBlocklistBackupFromJsonText
-import com.github.zly2006.zhihu.viewmodel.notificationEnvironment
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
