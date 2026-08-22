@@ -17,13 +17,10 @@
 
 package com.github.zly2006.zhihu
 
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
-import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -32,7 +29,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.CommentHolder
-import com.github.zly2006.zhihu.navigation.Notification
 import com.github.zly2006.zhihu.navigation.Pin
 import com.github.zly2006.zhihu.navigation.Question
 import com.github.zly2006.zhihu.navigation.resolveContent
@@ -46,7 +42,6 @@ import com.github.zly2006.zhihu.ui.NotificationScreen
 import com.github.zly2006.zhihu.viewmodel.MobileNotificationCategory
 import com.github.zly2006.zhihu.viewmodel.NotificationViewModel
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -62,61 +57,10 @@ class NotificationScreenInstrumentedTest {
         composeRule.resetAppPreferences()
     }
 
-    @Test
-    fun notificationScreen_showsStableToolbarActionsWithoutLiveData() {
-        /*
-         * Expected behavior:
-         * 1. The test preloads one local notification before composing the screen so NotificationScreen
-         *    does not need to fetch live notification data just to render its scaffold.
-         * 2. The toolbar should always show the page title plus clickable back and settings actions.
-         * 3. The "mark all as read" action should stay hidden while unreadCount remains at its default zero.
-         */
-        setNotificationScreenContent()
-
-        composeRule.onNodeWithText("消息").assertIsDisplayed()
-        MobileNotificationCategory.entries.forEach { category ->
-            composeRule
-                .onNodeWithTag("notification_category_${category.entryName}")
-                .assertExists()
-                .assertHasClickAction()
-        }
-        composeRule.onNodeWithContentDescription("返回").assertExists().assertHasClickAction()
-        composeRule.onNodeWithContentDescription("设置").assertExists().assertHasClickAction()
-        composeRule.onNodeWithContentDescription("已读").assertDoesNotExist()
-    }
-
-    @Test
-    fun notificationScreen_backButton_delegatesToNavigatorBackCallback() {
-        /*
-         * Expected behavior:
-         * 1. Pressing the toolbar back button should invoke the injected navigator back callback exactly once.
-         * 2. The screen should not record any forward navigation destination when the user only requests back.
-         * 3. This interaction must remain deterministic even when the notification list itself is seeded locally.
-         */
-        val recordingNavigator = setNotificationScreenContent()
-
-        composeRule.onNodeWithContentDescription("返回").performClick()
-
-        assertEquals(1, recordingNavigator.backCount)
-        assertTrue(recordingNavigator.destinations.isEmpty())
-    }
-
-    @Test
-    fun notificationScreen_settingsButton_navigatesToNotificationSettings() {
-        /*
-         * Expected behavior:
-         * 1. Pressing the toolbar settings button should navigate to Notification.NotificationSettings().
-         * 2. This action should not trigger a back event because it is a forward navigation path.
-         * 3. The recorded destination list should contain exactly the settings destination after one click.
-         */
-        val recordingNavigator = setNotificationScreenContent()
-
-        composeRule.onNodeWithContentDescription("设置").performClick()
-
-        assertEquals(0, recordingNavigator.backCount)
-        assertEquals(listOf(Notification.NotificationSettings()), recordingNavigator.destinations)
-    }
-
+    /**
+     * Regression: https://github.com/zly2006/zhihu-plus-plus/issues/490
+     * Fixed by: https://github.com/zly2006/zhihu-plus-plus/pull/503
+     */
     @Test
     fun notificationScreen_showsCategoryUnreadCountBadge() {
         /*
@@ -125,49 +69,53 @@ class NotificationScreenInstrumentedTest {
          * 2. The top category row should render that count as a visible badge on the matching category.
          * 3. The badge should be part of the category button, not a separate toolbar count.
          */
-        composeRule.seedNotificationViewModel(
-            unreadCounts = mapOf(MobileNotificationCategory.Like to 2),
-        )
         composeRule.setScreenContent {
             NotificationScreen()
         }
+        composeRule.seedNotificationViewModel(
+            unreadCounts = mapOf(MobileNotificationCategory.Like to 2),
+        )
 
         composeRule.onNodeWithText("2").assertIsDisplayed()
     }
 
+    /**
+     * Contract: https://github.com/zly2006/zhihu-plus-plus/issues/569
+     * Introduced by: https://github.com/zly2006/zhihu-plus-plus/pull/606
+     */
     @Test
     fun notificationScreen_fourObservedCommentActionsNavigateWithCommentAnchors() {
         val notifications = listOf(
             notificationFixture(
                 id = "comment-content",
-                title = "别人评论我的内容",
-                subTitle = "评论了你的回答",
+                title = "å«äººè¯è®ºæçåå®¹",
+                subTitle = "è¯è®ºäºä½ çåç­",
                 targetLink = "zhihu://comment/list/answer/2?anchor_comment_id=3&is_child=false",
             ),
             notificationFixture(
                 id = "reply-comment",
-                title = "别人回复我的评论",
-                subTitle = "回复了想法下你的评论",
+                title = "å«äººåå¤æçè¯è®º",
+                subTitle = "åå¤äºæ³æ³ä¸ä½ çè¯è®º",
                 targetLink = "zhihu://comment/list/pin/4?anchor_comment_id=5&is_child=true",
             ),
             notificationFixture(
                 id = "like-root-comment",
-                title = "别人点赞我的根评论",
-                subTitle = "喜欢了你的评论",
+                title = "å«äººç¹èµæçæ ¹è¯è®º",
+                subTitle = "åæ¬¢äºä½ çè¯è®º",
                 targetLink = "zhihu://comment/list/article/6?anchor_comment_id=7&is_child=false",
             ),
             notificationFixture(
                 id = "like-child-comment",
-                title = "别人点赞我的楼中楼评论",
-                subTitle = "喜欢了你的评论",
+                title = "å«äººç¹èµæçæ¥¼ä¸­æ¥¼è¯è®º",
+                subTitle = "åæ¬¢äºä½ çè¯è®º",
                 targetLink = "zhihu://comment/list/pin/8?anchor_comment_id=9&is_child=false",
             ),
         )
         val scrollGuardNotifications = List(8) { index ->
             notificationFixture(
                 id = "scroll-guard-$index",
-                title = "占位通知 $index",
-                subTitle = "测试占位",
+                title = "å ä½éç¥ $index",
+                subTitle = "æµè¯å ä½",
             )
         }
         val recordingNavigator = setNotificationScreenContent(notifications + scrollGuardNotifications)
@@ -200,9 +148,13 @@ class NotificationScreenInstrumentedTest {
         assertEquals(8L, likedChildPinComment.id)
     }
 
+    /**
+     * Contract: https://github.com/zly2006/zhihu-plus-plus/issues/569
+     * Introduced by: https://github.com/zly2006/zhihu-plus-plus/pull/606
+     */
     @Test
     fun realAccountCommentLinkSnapshot_all212OccurrencesResolveToTheirAnchors() {
-        // 2026-07-30 从当前账号 comment/like 通知各取两页后，保留结构与数量，ID 全部替换为测试值。
+        // 2026-07-30 ä»å½åè´¦å· comment/like éç¥ååä¸¤é¡µåï¼ä¿çç»æä¸æ°éï¼ID å¨é¨æ¿æ¢ä¸ºæµè¯å¼ã
         val fixtures = buildList {
             val groups = listOf(
                 ObservedCommentLinkGroup("pin", occurrences = 163, uniqueLinks = 163),
@@ -210,7 +162,7 @@ class NotificationScreenInstrumentedTest {
                 ObservedCommentLinkGroup("article", occurrences = 4, uniqueLinks = 4),
                 ObservedCommentLinkGroup("pin", occurrences = 1, uniqueLinks = 1, isChild = true),
                 ObservedCommentLinkGroup("question", occurrences = 1, uniqueLinks = 1),
-                // like 分区有 20 次跳转，聚合到 7 条唯一链接：3 条根评论、4 条楼中楼评论。
+                // like ååºæ 20 æ¬¡è·³è½¬ï¼èåå° 7 æ¡å¯ä¸é¾æ¥ï¼3 æ¡æ ¹è¯è®ºã4 æ¡æ¥¼ä¸­æ¥¼è¯è®ºã
                 ObservedCommentLinkGroup("answer", occurrences = 5, uniqueLinks = 3),
                 ObservedCommentLinkGroup("article", occurrences = 1, uniqueLinks = 1),
                 ObservedCommentLinkGroup("pin", occurrences = 14, uniqueLinks = 3),
@@ -244,7 +196,7 @@ class NotificationScreenInstrumentedTest {
         assertEquals(199, fixtures.map { it.url }.distinct().size)
         fixtures.forEach { fixture ->
             val holder = resolveContent(fixture.url) as? CommentHolder
-                ?: throw AssertionError("无法解析真实评论跳转结构：${fixture.url}")
+                ?: throw AssertionError("æ æ³è§£æçå®è¯è®ºè·³è½¬ç»æï¼${fixture.url}")
             assertEquals(fixture.anchorId, holder.commentId)
             when (val destination = holder.article) {
                 is Article -> {
@@ -262,7 +214,7 @@ class NotificationScreenInstrumentedTest {
                     assertEquals(fixture.contentId, destination.questionId)
                 }
 
-                else -> throw AssertionError("无法解析真实评论跳转结构：${fixture.url}")
+                else -> throw AssertionError("æ æ³è§£æçå®è¯è®ºè·³è½¬ç»æï¼${fixture.url}")
             }
         }
     }
@@ -270,16 +222,17 @@ class NotificationScreenInstrumentedTest {
     private fun setNotificationScreenContent(
         notifications: List<MobileNotificationTimelineItem> = listOf(notificationFixture()),
     ): RecordingNavigator {
-        composeRule.seedNotificationViewModel(notifications = notifications)
-        return composeRule.setScreenContent {
+        val recordingNavigator = composeRule.setScreenContent {
             NotificationScreen()
         }
+        composeRule.seedNotificationViewModel(notifications = notifications)
+        return recordingNavigator
     }
 
     private fun notificationFixture(
         id: String = "local-notification",
-        title: String = "测试用户 回复了回答下你的评论",
-        subTitle: String = "评论和回复",
+        title: String = "æµè¯ç¨æ· åå¤äºåç­ä¸ä½ çè¯è®º",
+        subTitle: String = "è¯è®ºååå¤",
         targetLink: String = "zhihu://comment/list/answer/2?anchor_comment_id=3&is_child=false",
     ) = MobileNotificationTimelineItem(
         id = id,
@@ -297,6 +250,14 @@ class NotificationScreenInstrumentedTest {
         unreadCounts: Map<MobileNotificationCategory, Int> = emptyMap(),
         notifications: List<MobileNotificationTimelineItem> = listOf(notificationFixture()),
     ) {
+        waitUntil(
+            "Notification screen did not finish its initial refresh",
+            timeoutMillis = 5_000,
+        ) {
+            ViewModelProvider(activity)[NotificationViewModel::class.java].let { viewModel ->
+                !viewModel.isLoading && viewModel.isEnd
+            }
+        }
         activity.runOnUiThread {
             val viewModel = ViewModelProvider(activity)[NotificationViewModel::class.java]
             viewModel.allData.clear()

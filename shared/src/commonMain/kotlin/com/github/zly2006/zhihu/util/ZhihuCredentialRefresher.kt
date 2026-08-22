@@ -17,7 +17,6 @@
 
 package com.github.zly2006.zhihu.util
 
-import com.github.zly2006.zhihu.shared.util.Log
 import com.github.zly2006.zhihu.shared.util.ZseSigner
 import com.github.zly2006.zhihu.shared.util.raiseForStatus
 import io.ktor.client.HttpClient
@@ -35,7 +34,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Clock
 
 /**
- * 知乎 Token 刷新业务逻辑
+ * ç¥ä¹ Token å·æ°ä¸å¡é»è¾
  */
 object ZhihuCredentialRefresher {
     private const val CLIENT_ID = "c3cef7c66a1843f8b3a9e6a1e3160e20"
@@ -70,15 +69,14 @@ object ZhihuCredentialRefresher {
     }
 
     /**
-     * 执行刷新 Token 操作
+     * æ§è¡å·æ° Token æä½
      */
     suspend fun refreshZhihuToken(refreshToken: String, httpClient: HttpClient): String {
         httpClient.pluginOrNull(HttpCookies)?.get(Url("https://www.zhihu.com/"))?.get("z_c0")
-            ?: throw IllegalArgumentException("刷新失败：缺失关键 cookie z_c0，请重新登录")
+            ?: throw IllegalArgumentException("å·æ°å¤±è´¥ï¼ç¼ºå¤±å³é® cookie z_c0ï¼è¯·éæ°ç»å½")
 
         val timestamp = Clock.System.now().toEpochMilliseconds()
         val payloadMap = generateRefreshPayload(refreshToken, timestamp)
-        Log.d("ZhihuCredentialRefresher", "请求原始数据: $payloadMap")
 
         val formData = payloadMap.entries.joinToString("&") {
             "${it.key.encodeURLParameter(spaceToPlus = true)}=${it.value.encodeURLParameter(spaceToPlus = true)}"

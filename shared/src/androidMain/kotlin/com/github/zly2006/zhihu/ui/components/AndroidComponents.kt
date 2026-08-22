@@ -123,6 +123,8 @@ class OpenImageDialog(
     }
 }
 
+actual val feedKeywordExtractionAvailable: Boolean = true
+
 @Composable
 actual fun rememberSegmentedTextRuntime(): SegmentedTextRuntime {
     val context = LocalContext.current

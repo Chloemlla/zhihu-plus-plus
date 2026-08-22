@@ -46,21 +46,19 @@ import androidx.compose.ui.unit.sp
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.CommentHolder
 import com.github.zly2006.zhihu.navigation.NavDestination
-import com.github.zly2006.zhihu.navigation.Pin
-import com.github.zly2006.zhihu.navigation.Question
-import com.github.zly2006.zhihu.navigation.SegmentCommentHolder
 import com.github.zly2006.zhihu.shared.data.DataHolder
 import com.github.zly2006.zhihu.shared.data.ZhihuJson
 import com.github.zly2006.zhihu.shared.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.shared.viewmodel.CommentItem
 import com.github.zly2006.zhihu.theme.Typography
 import com.github.zly2006.zhihu.ui.CommentScreen
+import com.github.zly2006.zhihu.ui.commentThreadKey
 import com.github.zly2006.zhihu.ui.rememberArticleHost
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 
 /**
- * 最好不要在 if 或者其他条件语句中使用，这会导致本组件内部状态丢失。
+ * æå¥½ä¸è¦å¨ if æèå¶ä»æ¡ä»¶è¯­å¥ä¸­ä½¿ç¨ï¼è¿ä¼å¯¼è´æ¬ç»ä»¶åé¨ç¶æä¸¢å¤±ã
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,7 +77,7 @@ fun CommentScreenComponent(
     var authorCommentPolicyAcknowledged by remember {
         mutableStateOf(settings.getBoolean(ZH_PLUS_AUTHOR_COMMENT_POLICY_ACKNOWLEDGED_KEY, false))
     }
-    val contentStateKey = commentContentStateKey(content)
+    val contentStateKey = content.commentThreadKey()
     var activeChildComment by rememberSaveable(contentStateKey, saver = activeChildCommentSaver) {
         mutableStateOf<CommentItem?>(null)
     }
@@ -100,7 +98,7 @@ fun CommentScreenComponent(
     val rootSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val childSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val childTarget = activeChildComment?.clickTarget
-    val childDraftKey = childTarget?.let(::commentContentStateKey)
+    val childDraftKey = childTarget?.commentThreadKey()
     var childListResetToken by rememberSaveable(contentStateKey) { mutableIntStateOf(0) }
     val childListState = rememberSaveable(
         contentStateKey,
@@ -154,7 +152,7 @@ fun CommentScreenComponent(
                 shouldDismissOnBackPress = true,
                 shouldDismissOnClickOutside = true,
             ),
-            dragHandle = { DragHandleTitle("评论") },
+            dragHandle = { DragHandleTitle("è¯è®º") },
             usePlatformWindow = content !is Article,
         ) {
             CommentScreen(
@@ -190,7 +188,7 @@ fun CommentScreenComponent(
                 shouldDismissOnBackPress = true,
                 shouldDismissOnClickOutside = true,
             ),
-            dragHandle = { DragHandleTitle("回复") },
+            dragHandle = { DragHandleTitle("åå¤") },
             usePlatformWindow = childTarget.article !is Article,
         ) {
             CommentScreen(
@@ -209,16 +207,16 @@ fun CommentScreenComponent(
         AlertDialog(
             modifier = Modifier.testTag(ZH_PLUS_AUTHOR_COMMENT_POLICY_DIALOG_TAG),
             onDismissRequest = {},
-            title = { Text("评论区使用须知") },
+            title = { Text("è¯è®ºåºä½¿ç¨é¡»ç¥") },
             text = {
                 Column {
                     Text(
-                        "请勿通过知乎提交任何 Bug 反馈或功能建议。所有反馈仅在 GitHub Issues 处理；" +
-                            "不要发送到任何交流群，也不要发送到知乎++作者的回答或想法评论区。",
+                        "è¯·å¿éè¿ç¥ä¹æäº¤ä»»ä½ Bug åé¦æåè½å»ºè®®ãææåé¦ä»å¨ GitHub Issues å¤çï¼" +
+                            "ä¸è¦åéå°ä»»ä½äº¤æµç¾¤ï¼ä¹ä¸è¦åéå°ç¥ä¹++ä½èçåç­ææ³æ³è¯è®ºåºã",
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "评论区只可发布与当前回答或想法相关的内容。无关内容将被无视，严重时会被直接拉黑。",
+                        text = "è¯è®ºåºåªå¯åå¸ä¸å½ååç­ææ³æ³ç¸å³çåå®¹ãæ å³åå®¹å°è¢«æ è§ï¼ä¸¥éæ¶ä¼è¢«ç´æ¥æé»ã",
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Bold,
                     )
@@ -232,7 +230,7 @@ fun CommentScreenComponent(
                         authorCommentPolicyAcknowledged = true
                     },
                 ) {
-                    Text("我已知晓并确认")
+                    Text("æå·²ç¥æå¹¶ç¡®è®¤")
                 }
             },
         )
@@ -271,12 +269,3 @@ private val activeChildCommentSaver = Saver<MutableState<CommentItem?>, List<Str
         )
     },
 )
-
-private fun commentContentStateKey(content: NavDestination): String = when (content) {
-    is Article -> "article:${content.type}:${content.id}"
-    is Question -> "question:${content.questionId}"
-    is Pin -> "pin:${content.id}"
-    is CommentHolder -> "comment:${commentContentStateKey(content.article)}:${content.commentId}"
-    is SegmentCommentHolder -> "segment:${content.contentType}:${content.contentId}:${content.segmentId}"
-    else -> content.toString()
-}

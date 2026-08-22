@@ -45,6 +45,8 @@ import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 import kotlinx.coroutines.launch
 
+actual val feedKeywordExtractionAvailable: Boolean = true
+
 @Composable
 actual fun rememberFeedBlockActions(): FeedBlockActions {
     val database = remember { getContentFilterDatabase() }

@@ -16,13 +16,25 @@
  */
 
 package com.github.zly2006.zhihu.shared.platform
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.github.zly2006.zhihu.ui.noopSettingsStore
-import com.github.zly2006.zhihu.ui.openIosUrl
 
-@Composable
-actual fun rememberExternalUrlOpener(): (String) -> Unit = remember { ::openIosUrl }
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.backhandler.BackHandler
+import com.github.zly2006.zhihu.shared.account.NativeAccountStore
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import kotlinx.cinterop.BetaInteropApi
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.launch
+import platform.Foundation.NSData
+import platform.Foundation.NSFileManager
+import platform.Foundation.dataWithBytes
+import kotlin.time.Clock
 
 @Composable
 actual fun rememberSystemUrlOpener(): (String) -> Unit = rememberExternalUrlOpener()
@@ -38,16 +50,30 @@ actual fun rememberImageGalleryOpener(): (List<String>, Int) -> Unit {
     val openExternalUrl = rememberExternalUrlOpener()
     return remember(openExternalUrl) {
         { urls, initialIndex ->
-            urls.getOrNull(initialIndex)?.let(openExternalUrl)
+            if (urls.isNotEmpty()) {
+                urls[initialIndex.coerceIn(0, urls.lastIndex)].let(openExternalUrl)
+            }
         }
     }
 }
 
 @Composable
 actual fun rememberImageSaver(): (String) -> Unit {
+    val scope = rememberCoroutineScope()
     val userMessages = rememberUserMessageSink()
-    return remember(userMessages) {
-        { userMessages.showMessage("iOS 图片保存暂未实现") } // TODO: iOS 图片保存
+    val accountStore = remember { NativeAccountStore() }
+    return remember(scope, userMessages, accountStore) {
+        { imageUrl ->
+            scope.launch {
+                runCatching {
+                    saveNativeImageToDownloads(accountStore, imageUrl)
+                }.onSuccess { filePath ->
+                    userMessages.showShortMessage("已保存图片: $filePath")
+                }.onFailure { error ->
+                    userMessages.showShortMessage("保存失败: ${error.message}")
+                }
+            }
+        }
     }
 }
 
@@ -55,19 +81,57 @@ actual fun rememberImageSaver(): (String) -> Unit {
 actual fun rememberImageSharer(): (String) -> Unit {
     val userMessages = rememberUserMessageSink()
     return remember(userMessages) {
-        { userMessages.showMessage("iOS 图片分享暂未实现") } // TODO: iOS 图片分享
+        { imageUrl ->
+            runCatching {
+                copyNativePlainText(imageUrl)
+                userMessages.showShortMessage("已复制图片链接")
+            }.onFailure { error ->
+                userMessages.showShortMessage("分享失败: ${error.message}")
+            }
+        }
     }
+}
+
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
+private suspend fun saveNativeImageToDownloads(
+    accountStore: NativeAccountStore,
+    imageUrl: String,
+): String {
+    val imageBytes = accountStore.httpClient().get(imageUrl).body<ByteArray>()
+    val extension = imageUrl
+        .substringBefore('?')
+        .substringAfterLast('/')
+        .substringAfterLast('.', "")
+        .takeIf { it.length in 2..5 } ?: "jpg"
+    val downloadsDirectory = nativeDownloadsDirectoryPath()
+    NSFileManager.defaultManager.createDirectoryAtPath(
+        downloadsDirectory,
+        withIntermediateDirectories = true,
+        attributes = null,
+        error = null,
+    )
+    val filePath = "$downloadsDirectory/image_${Clock.System.now().toEpochMilliseconds()}.$extension"
+    val written = imageBytes.usePinned { pinned ->
+        NSFileManager.defaultManager.createFileAtPath(
+            filePath,
+            contents = NSData.dataWithBytes(pinned.addressOf(0), imageBytes.size.toULong()),
+            attributes = null,
+        )
+    }
+    check(written) { "无法写入 $filePath" }
+    return filePath
 }
 
 @Composable
 actual fun rememberPlainTextClipboard(): (label: String, text: String) -> Unit = remember {
-    { _, text ->
-        platform.UIKit.UIPasteboard.generalPasteboard.string = text
-    }
+    { _, text -> copyNativePlainText(text) }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
+@Suppress("DEPRECATION")
 @Composable
-actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) = Unit // TODO: iOS 返回手势处理
+actual fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit) =
+    BackHandler(enabled = enabled, onBack = onBack)
 
 @Composable
 actual fun PlatformPredictiveBackHandler(
@@ -78,10 +142,7 @@ actual fun PlatformPredictiveBackHandler(
 ) = PlatformBackHandler(enabled = enabled, onBack = onBack)
 
 @Composable
-actual fun rememberSettingsStore(): SettingsStore = noopSettingsStore() // TODO: iOS 设置存储
+actual fun rememberSettingsStore(): SettingsStore = remember { nativeSettingsStore("settings.properties") }
 
 @Composable
-actual fun rememberIsLiteVariant(): Boolean = false // TODO: iOS 变体判断
-
-@Composable
-actual fun rememberUserMessageSink(): UserMessageSink = remember { UserMessageSink(showShortMessage = {}) } // TODO: iOS 用户消息提示
+actual fun rememberIsLiteVariant(): Boolean = false

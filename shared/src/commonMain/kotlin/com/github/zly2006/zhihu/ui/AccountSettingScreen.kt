@@ -100,6 +100,7 @@ import com.github.zly2006.zhihu.ui.subscreens.defaultBottomBarSelectionKeys
 import com.github.zly2006.zhihu.ui.subscreens.normalizeBottomBarSelection
 import com.github.zly2006.zhihu.ui.subscreens.rememberSystemUpdateRuntime
 import com.github.zly2006.zhihu.ui.subscreens.shouldShowAccountHistoryShortcut
+import kotlinx.coroutines.CancellationException
 import org.jetbrains.compose.resources.painterResource
 import zhihu.shared.generated.resources.Res
 import zhihu.shared.generated.resources.ic_github_24dp
@@ -194,6 +195,8 @@ fun AccountSettingScreen(
                 if (refreshAccountProfileOnEnter && data.login) {
                     try {
                         refreshProfile()
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Log.e("AccountSettingScreen", "Failed to refresh account profile", e)
                         userMessages.showShortMessage("获取用户信息失败")

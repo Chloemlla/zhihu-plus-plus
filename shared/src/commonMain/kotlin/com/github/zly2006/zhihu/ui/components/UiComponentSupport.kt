@@ -98,6 +98,8 @@ data class BlockByKeywordsRuntime(
 @Composable
 expect fun rememberBlockByKeywordsRuntime(): BlockByKeywordsRuntime
 
+expect val feedKeywordExtractionAvailable: Boolean
+
 @Composable
 fun FeedAuthorBlockConfirmDialog(
     request: FeedAuthorBlockRequest?,

@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import com.github.zly2006.zhihu.shared.platform.rememberPlainTextClipboard
 import com.github.zly2006.zhihu.shared.platform.rememberUserMessageSink
 
+actual val feedKeywordExtractionAvailable: Boolean = false
+
 @Composable
 actual fun rememberFeedBlockActions(): FeedBlockActions = remember {
     FeedBlockActions(
