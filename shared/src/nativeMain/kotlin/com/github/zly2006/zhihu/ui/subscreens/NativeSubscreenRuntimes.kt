@@ -25,34 +25,19 @@ import com.github.zly2006.zhihu.shared.platform.nativeBundledResourcePath
 import com.github.zly2006.zhihu.shared.platform.nativeIsDesktop
 import com.github.zly2006.zhihu.shared.platform.rememberExternalUrlOpener
 import com.github.zly2006.zhihu.shared.platform.rememberSettingsStore
-import com.github.zly2006.zhihu.shared.platform.rememberSettingsStore
-import com.github.zly2006.zhihu.shared.updater.SchematicVersion
 import com.github.zly2006.zhihu.shared.updater.SchematicVersion
 import com.github.zly2006.zhihu.shared.updater.extractGithubReleaseNotes
-import com.github.zly2006.zhihu.shared.updater.extractGithubReleaseNotes
-import com.github.zly2006.zhihu.shared.updater.fetchLatestZhihuRelease
 import com.github.zly2006.zhihu.shared.updater.fetchLatestZhihuRelease
 import com.github.zly2006.zhihu.shared.updater.fetchNightlyZhihuRelease
-import com.github.zly2006.zhihu.shared.updater.fetchNightlyZhihuRelease
-import com.github.zly2006.zhihu.ui.NativeArticleSpeechController
 import com.github.zly2006.zhihu.ui.NativeArticleSpeechController
 import com.github.zly2006.zhihu.ui.TtsState
-import com.github.zly2006.zhihu.ui.TtsState
-import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.Libs
 import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.ByteVar
-import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.readBytes
-import kotlinx.cinterop.readBytes
-import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.reinterpret
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileManager
 
 private const val PREF_AUTO_CHECK_UPDATES = "autoCheckUpdates"
@@ -212,6 +197,7 @@ actual fun rememberDeveloperSettingsRuntime(): DeveloperSettingsRuntime {
         )
     }
 }
+
 @Composable
 actual fun rememberOpenSourceLicensesLibraries(): Libs = remember {
     loadNativeAboutLibrariesJson()
