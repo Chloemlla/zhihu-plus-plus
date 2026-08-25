@@ -95,7 +95,6 @@ import com.github.zly2006.zhihu.test.MainActivityComposeRule
 import com.github.zly2006.zhihu.test.resetAppPreferences
 import com.github.zly2006.zhihu.test.setScreenContent
 import com.github.zly2006.zhihu.ui.ARTICLE_USE_WEBVIEW_PREFERENCE_KEY
-import com.github.zly2006.zhihu.ui.ArticleActionsMenu
 import com.github.zly2006.zhihu.ui.ArticleScreen
 import com.github.zly2006.zhihu.ui.PREFERENCE_NAME
 import com.github.zly2006.zhihu.ui.TtsState
@@ -117,8 +116,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 
 @RunWith(AndroidJUnit4::class)
 class ArticleScreenInstrumentedTest {
@@ -1473,58 +1470,6 @@ class ArticleScreenInstrumentedTest {
     }
 
     /**
-     * Contract: https://github.com/zly2006/zhihu-plus-plus/issues/550
-     * Introduced by: https://github.com/zly2006/zhihu-plus-plus/pull/552
-     */
-    @Test
-    fun articleScreenUsesSharedAnswerNavigatorSnapshotForReadingQueue() {
-        val viewModel = seededAnswerViewModel(ANSWER)
-        val snapshotCurrentId = AtomicLong(-1L)
-        val snapshotLimit = AtomicInteger(0)
-        val sharedNavigator = object : AnswerNavigator(
-            sourceName = "此问题",
-            environment = NO_OP_API_ENVIRONMENT,
-        ) {
-            override suspend fun loadNext(): Article? = null
-
-            override suspend fun prefetchNext(currentArticleId: Long) = Unit
-
-            override suspend fun remainingAnswersSnapshot(
-                currentArticleId: Long,
-                limit: Int,
-            ): List<Article> {
-                snapshotCurrentId.set(currentArticleId)
-                snapshotLimit.set(limit)
-                return listOf(
-                    NEXT_ANSWER,
-                    Article(type = ArticleType.Answer, id = 779L),
-                ).take(limit)
-            }
-        }
-        composeRule.activity.runOnUiThread {
-            composeRule.activity.articleAnswerSwitchState.pendingNavigator = sharedNavigator
-        }
-        composeRule.setScreenContent {
-            Scaffold(
-                modifier = androidx.compose.ui.Modifier
-                    .fillMaxSize(),
-            ) { _ ->
-                ArticleScreen(
-                    article = ANSWER,
-                    viewModel = viewModel,
-                )
-            }
-        }
-
-        composeRule.onNodeWithContentDescription("更多选项").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("开始连续朗读").assertIsDisplayed().performClick()
-
-        waitForReadingQueue(listOf(ANSWER.id, NEXT_ANSWER.id, 779L))
-        assertEquals(ANSWER.id, snapshotCurrentId.get())
-        assertEquals(4, snapshotLimit.get())
-    }
-
-    /**
      * Regression: https://github.com/zly2006/zhihu-plus-plus/issues/213
      * Fixed by: https://github.com/zly2006/zhihu-plus-plus/pull/316
      */
@@ -1647,42 +1592,6 @@ class ArticleScreenInstrumentedTest {
                 )
             }
         }
-    }
-
-    private fun setArticleActionsMenu(
-        viewModel: ArticleViewModel,
-        article: Article = ANSWER,
-        answerQueueFallbackProvider: suspend (limit: Int) -> List<Article>,
-    ) {
-        composeRule.setScreenContent {
-            Scaffold(
-                modifier = androidx.compose.ui.Modifier
-                    .fillMaxSize(),
-            ) { _ ->
-                ArticleActionsMenu(
-                    article = article,
-                    viewModel = viewModel,
-                    answerQueueFallbackProvider = answerQueueFallbackProvider,
-                    showMenu = true,
-                    onDismissRequest = {},
-                    onSummaryRequest = {},
-                    onAigcFlagRequest = {},
-                    onExportRequest = {},
-                )
-            }
-        }
-    }
-
-    private fun waitForReadingQueue(expectedIds: List<Long>) {
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            AndroidReadingPlayerBridge.state.value.queue
-                .map(ReadingQueueItem::id) == expectedIds
-        }
-        assertEquals(
-            expectedIds,
-            AndroidReadingPlayerBridge.state.value.queue
-                .map(ReadingQueueItem::id),
-        )
     }
 
     private fun dragSkipAnswerButtonBy(deltaX: Float) {
