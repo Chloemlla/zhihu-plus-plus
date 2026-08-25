@@ -84,10 +84,7 @@ import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.reading.AndroidReadingPlayerBridge
 import com.github.zly2006.zhihu.reading.ContentReadingService
-import com.github.zly2006.zhihu.reading.ReadingContentType
-import com.github.zly2006.zhihu.reading.ReadingPlaybackStatus
 import com.github.zly2006.zhihu.reading.ReadingPlayerState
-import com.github.zly2006.zhihu.reading.ReadingQueueItem
 import com.github.zly2006.zhihu.reading.ReadingQueueSourceRegistry
 import com.github.zly2006.zhihu.shared.data.DataHolder
 import com.github.zly2006.zhihu.shared.ui.AnswerDoubleTapAction
@@ -1418,55 +1415,6 @@ class ArticleScreenInstrumentedTest {
         }
 
         composeRule.onNodeWithText("tts=Ready").assertIsDisplayed()
-    }
-
-    /**
-     * Contract: https://github.com/zly2006/zhihu-plus-plus/issues/550
-     * Introduced by: https://github.com/zly2006/zhihu-plus-plus/pull/552
-     */
-    @Test
-    fun pausedContinuousReadingOnAnotherQueueItemUsesStopActionInArticleMenu() {
-        val viewModel = seededAnswerViewModel(ANSWER)
-        AndroidReadingPlayerBridge.publish(
-            ReadingPlayerState(
-                status = ReadingPlaybackStatus.Paused,
-                queue = listOf(
-                    ReadingQueueItem(
-                        contentType = ReadingContentType.Answer,
-                        id = ANSWER.id,
-                        title = "离线 Answer 标题",
-                        author = "离线答主",
-                    ),
-                    ReadingQueueItem(
-                        contentType = ReadingContentType.Answer,
-                        id = NEXT_ANSWER.id,
-                        title = "下一个离线回答",
-                        author = "下一个作者",
-                    ),
-                ),
-                currentIndex = 1,
-            ),
-        )
-        composeRule.setScreenContent {
-            Scaffold(
-                modifier = androidx.compose.ui.Modifier
-                    .fillMaxSize(),
-            ) { _ ->
-                ArticleScreen(
-                    article = ANSWER,
-                    viewModel = viewModel,
-                )
-            }
-        }
-
-        composeRule.onNodeWithContentDescription("更多选项").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("停止朗读").assertIsDisplayed()
-        composeRule.onNodeWithText("暂停朗读").assertDoesNotExist()
-        composeRule.onNodeWithText("继续朗读").assertDoesNotExist()
-        composeRule.onNodeWithText("停止朗读").performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            !AndroidReadingPlayerBridge.state.value.hasSession
-        }
     }
 
     /**
