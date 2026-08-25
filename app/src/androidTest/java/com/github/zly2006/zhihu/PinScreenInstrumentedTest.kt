@@ -81,7 +81,7 @@ class PinScreenInstrumentedTest {
                 content = Pin(101),
             )
         }
-        val draft = "è¿æ¯ä¸æ®µå°æªåéçé¿è¯è®ºï¼ç¨æ¥éªè¯å³é­è¯è®ºåºåéæ°æå¼ä»ç¶ä¿çå¨é¨åå®¹ã".repeat(8)
+        val draft = "这是一段尚未发送的长评论，用来验证关闭评论区后重新打开仍然保留全部内容。".repeat(8)
 
         composeRule.waitUntilTagExists(COMMENT_INPUT_TAG)
         composeRule.onNodeWithTag(COMMENT_INPUT_TAG).performTextInput(draft)
@@ -163,24 +163,24 @@ class PinScreenInstrumentedTest {
         author = DataHolder.Author(
             avatarUrl = "",
             gender = 0,
-            headline = "ç¦»çº¿ä½èç®ä»",
+            headline = "离线作者简介",
             id = "pin-author-id",
             isAdvertiser = false,
             isOrg = false,
-            name = "ç¦»çº¿æ³æ³ä½è",
+            name = "离线想法作者",
             type = "people",
             url = "https://www.zhihu.com/people/pin-author-token",
             urlToken = "pin-author-token",
             userType = "people",
             badgeV2 = DataHolder.BadgeV2(
-                title = "ç¦»çº¿ä¼ç§ç­ä¸»",
+                title = "离线优秀答主",
                 icon = DataHolder.ZH_PLUS_AUTHOR_BADGE_ICON,
                 detailBadges = listOf(
                     DataHolder.BadgeV2.Badge(
                         type = "best",
                         detailType = "best_answerer",
-                        title = "ä¼ç§ç­ä¸»",
-                        description = "ç¦»çº¿ä¼ç§ç­ä¸»",
+                        title = "优秀答主",
+                        description = "离线优秀答主",
                         icon = DataHolder.ZH_PLUS_AUTHOR_BADGE_ICON,
                         badgeStatus = "passed",
                     ),
@@ -189,7 +189,7 @@ class PinScreenInstrumentedTest {
         ),
         content = listOf(
             DataHolder.Pin.ContentText(
-                content = "è¿æ¯ PinScreen instrumented test çç¦»çº¿æ­£æã",
+                content = "这是 PinScreen instrumented test 的离线正文。",
                 title = "",
             ),
             DataHolder.Pin.ContentLinkCard(
@@ -198,7 +198,7 @@ class PinScreenInstrumentedTest {
                 url = "https://www.zhihu.com/question/987654321",
             ),
         ),
-        contentHtml = "<p>è¿æ¯ <b>PinScreen</b> instrumented test çç¦»çº¿æ­£æã</p>",
+        contentHtml = "<p>这是 <b>PinScreen</b> instrumented test 的离线正文。</p>",
         likeCount = 9,
         commentCount = 3,
         created = 1_713_456_789L,
@@ -210,7 +210,7 @@ class PinScreenInstrumentedTest {
                 id = "pin-liker-id",
                 isAdvertiser = false,
                 isOrg = false,
-                name = "ç¦»çº¿ç¹èµè",
+                name = "离线点赞者",
                 type = "people",
                 url = "https://www.zhihu.com/people/pin-liker-token",
                 urlToken = "pin-liker-token",
@@ -222,7 +222,7 @@ class PinScreenInstrumentedTest {
                 id = "topic-1",
                 type = "topic",
                 url = "https://www.zhihu.com/topic/topic-1",
-                name = "ç¦»çº¿è¯é¢ä¸",
+                name = "离线话题一",
             ),
         ),
     )
@@ -237,19 +237,19 @@ class PinScreenInstrumentedTest {
                 bottomPoll = DataHolder.Pin.BottomPoll(
                     voting = DataHolder.Pin.Poll(
                         id = "poll-101",
-                        title = "ç¥ä¹++å¥½ç¨å",
+                        title = "知乎++好用吗",
                         maxSelections = 1,
                         type = "single",
                         endAt = -1,
                         options = listOf(
                             DataHolder.Pin.PollOption(
                                 id = "option-a",
-                                title = "äºé¢æ",
+                                title = "五颗星",
                                 votingCount = 0,
                             ),
                             DataHolder.Pin.PollOption(
                                 id = "option-b",
-                                title = "åé¢æ",
+                                title = "四颗星",
                                 votingCount = 0,
                             ),
                         ),

@@ -54,8 +54,8 @@ class CollectionsViewModelTest {
             assertEquals("101_3_3.0", request.headers["x-zse-93"])
             assertTrue(request.headers["x-zse-96"].orEmpty().startsWith("2.0_"))
             val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
-            assertEquals("æµè¯æ¶èå¤¹", body.getValue("title").jsonPrimitive.content)
-            assertEquals("æµè¯æè¿°", body.getValue("description").jsonPrimitive.content)
+            assertEquals("测试收藏夹", body.getValue("title").jsonPrimitive.content)
+            assertEquals("测试描述", body.getValue("description").jsonPrimitive.content)
             assertTrue(body.getValue("is_public").jsonPrimitive.boolean)
             respondJson(
                 """{"status":100,"message":"","collection":{"id":123}}""",
@@ -66,8 +66,8 @@ class CollectionsViewModelTest {
         assertTrue(
             viewModel.createCollection(
                 environment = testEnvironment(client),
-                title = "æµè¯æ¶èå¤¹",
-                description = "æµè¯æè¿°",
+                title = "测试收藏夹",
+                description = "测试描述",
                 isPublic = true,
             ),
         )
@@ -94,17 +94,17 @@ class CollectionsViewModelTest {
         assertTrue(
             viewModel.deleteCollection(
                 environment,
-                Collection(id = "selected-id", title = "å¾å é¤æ¶èå¤¹"),
+                Collection(id = "selected-id", title = "待删除收藏夹"),
             ),
         )
         assertFalse(
             viewModel.deleteCollection(
                 environment,
-                Collection(id = "default-id", title = "é»è®¤æ¶èå¤¹", isDefault = true),
+                Collection(id = "default-id", title = "默认收藏夹", isDefault = true),
             ),
         )
         assertEquals(1, requestCount)
-        assertEquals("é»è®¤æ¶èå¤¹ä¸è½å é¤", viewModel.deleteCollectionError)
+        assertEquals("默认收藏夹不能删除", viewModel.deleteCollectionError)
     }
 
     /**
@@ -115,17 +115,17 @@ class CollectionsViewModelTest {
     fun httpSuccessWithoutDeleteConfirmationIsRejected() = runTest {
         val client = jsonClient { request ->
             assertEquals(HttpMethod.Delete, request.method)
-            respondJson("""{"success":false,"message":"ä¸è½å é¤"}""")
+            respondJson("""{"success":false,"message":"不能删除"}""")
         }
         val viewModel = CollectionsViewModel("owner")
 
         assertFalse(
             viewModel.deleteCollection(
                 testEnvironment(client),
-                Collection(id = "selected-id", title = "å¾å é¤æ¶èå¤¹"),
+                Collection(id = "selected-id", title = "待删除收藏夹"),
             ),
         )
-        assertEquals("ä¸è½å é¤", viewModel.deleteCollectionError)
+        assertEquals("不能删除", viewModel.deleteCollectionError)
     }
 
     private fun jsonClient(handler: MockRequestHandler) =

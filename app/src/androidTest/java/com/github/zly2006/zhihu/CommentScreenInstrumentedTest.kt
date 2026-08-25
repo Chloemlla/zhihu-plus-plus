@@ -188,14 +188,14 @@ class CommentScreenInstrumentedTest {
                 viewModel = viewModel,
                 commentEmojis = listOf(
                     CommentEmoji(
-                        placeholder = "[æå]",
+                        placeholder = "[惊喜]",
                         inlineKey = "emoji_test",
                     ),
                 ),
             ),
         )
 
-        composeRule.onNodeWithTag(COMMENT_INPUT_TAG).performTextInput("å·²æèç¨¿")
+        composeRule.onNodeWithTag(COMMENT_INPUT_TAG).performTextInput("已有草稿")
         composeRule
             .onNodeWithTag(COMMENT_INPUT_TAG)
             .performSemanticsAction(SemanticsActions.SetSelection) { setSelection ->
@@ -203,11 +203,11 @@ class CommentScreenInstrumentedTest {
             }
         composeRule.onNodeWithTag(COMMENT_EMOJI_BUTTON_TAG).performClick()
         composeRule.onNodeWithTag(COMMENT_EMOJI_PICKER_TAG).assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("åæ¢å°é®ç").assertIsDisplayed()
-        composeRule.onNodeWithTag(COMMENT_EMOJI_ITEM_TAG_PREFIX + "[æå]").performClick()
-        composeRule.onNodeWithTag(COMMENT_INPUT_TAG).assertTextEquals("[æå]å·²æèç¨¿")
+        composeRule.onNodeWithContentDescription("切换到键盘").assertIsDisplayed()
+        composeRule.onNodeWithTag(COMMENT_EMOJI_ITEM_TAG_PREFIX + "[惊喜]").performClick()
+        composeRule.onNodeWithTag(COMMENT_INPUT_TAG).assertTextEquals("[惊喜]已有草稿")
         composeRule.onNodeWithTag(COMMENT_EMOJI_BUTTON_TAG).performClick()
-        composeRule.onNodeWithContentDescription("éæ©è¡¨æ").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("选择表情").assertIsDisplayed()
     }
 
     /**
@@ -220,13 +220,13 @@ class CommentScreenInstrumentedTest {
             contentId = "1907864533831225689",
             contentType = "answer",
             segmentId = "1993195116945487118,1978217501180568395",
-            segmentContent = "åæ æª¬ï¼æä¹åï¼è°åçï¼åçåªå¿ï¼ä»ä¹æ¶ååçï¼åçå¿ææä¹æ ·ï¼",
+            segmentContent = "吃柠檬，怎么吃？谁吃的？吃的哪儿？什么时候吃的？吃的心情怎么样？",
             paragraphId = "nX5RAoeG",
             startOffset = 0,
             endOffset = 32,
         )
         val secondFragment = firstFragment.copy(
-            segmentContent = "æ æª¬ï¼æ¯ææ ·çæª¬ï¼è¿ä¸ªæª¬æ¯å¦ä»äºæ­£å½è¡ä¸ï¼è¿ä¸ªæª¬æ¯æ´»çè¿æ¯æ­»çï¼",
+            segmentContent = "柠檬，是怎样的檬？这个檬是否从事正当行业？这个檬是活着还是死的？",
             paragraphId = "CANw6uZN",
         )
         val currentFragment = mutableStateOf<NavDestination>(firstFragment)
@@ -312,7 +312,7 @@ class CommentScreenInstrumentedTest {
                 }
             } else {
                 androidx.compose.material3.Text(
-                    text = "å¤é¨é¡µé¢",
+                    text = "外部页面",
                     modifier = Modifier.testTag("external_page"),
                 )
             }
@@ -427,35 +427,35 @@ class CommentScreenInstrumentedTest {
         val viewModel = seedRootCommentViewModel(emptyList())
         runBlocking {
             val database = getContentFilterDatabase(composeRule.activity)
-            database.blockedUserDao().insertUser(BlockedUser("blocked-root-author", "è¢«å±è½æ ¹è¯è®ºä½è"))
-            database.blockedUserDao().insertUser(BlockedUser("blocked-child-author", "è¢«å±è½å­è¯è®ºä½è"))
+            database.blockedUserDao().insertUser(BlockedUser("blocked-root-author", "被屏蔽根评论作者"))
+            database.blockedUserDao().insertUser(BlockedUser("blocked-child-author", "被屏蔽子评论作者"))
             viewModel.processForTest(
                 composeRule.activity,
                 listOf(
                     seedComment(
                         id = "blocked-root",
                         authorId = "blocked-root-author",
-                        authorName = "è¢«å±è½æ ¹è¯è®ºä½è",
-                        content = "è¿æ¡æ ¹è¯è®ºä¸åºå±ç¤º",
+                        authorName = "被屏蔽根评论作者",
+                        content = "这条根评论不应展示",
                     ),
                     seedComment(
                         id = "allowed-root",
                         authorId = "allowed-root-author",
-                        authorName = "å¯è§æ ¹è¯è®ºä½è",
-                        content = "è¿æ¡æ ¹è¯è®ºåºå±ç¤º",
+                        authorName = "可见根评论作者",
+                        content = "这条根评论应展示",
                         childCommentCount = 2,
                         childComments = listOf(
                             seedComment(
                                 id = "blocked-child",
                                 authorId = "blocked-child-author",
-                                authorName = "è¢«å±è½å­è¯è®ºä½è",
-                                content = "è¿æ¡ååµå­è¯è®ºä¸åºå±ç¤º",
+                                authorName = "被屏蔽子评论作者",
+                                content = "这条内嵌子评论不应展示",
                             ),
                             seedComment(
                                 id = "allowed-child",
                                 authorId = "allowed-child-author",
-                                authorName = "å¯è§å­è¯è®ºä½è",
-                                content = "è¿æ¡ååµå­è¯è®ºåºå±ç¤º",
+                                authorName = "可见子评论作者",
+                                content = "这条内嵌子评论应展示",
                             ),
                         ),
                     ),
@@ -468,12 +468,12 @@ class CommentScreenInstrumentedTest {
         )
 
         composeRule.onNodeWithTag("comment_row_allowed-root").assertIsDisplayed()
-        composeRule.onNodeWithText("å¯è§æ ¹è¯è®ºä½è").assertIsDisplayed()
-        composeRule.onNodeWithText("è¿æ¡ååµå­è¯è®ºåºå±ç¤º").assertIsDisplayed()
+        composeRule.onNodeWithText("可见根评论作者").assertIsDisplayed()
+        composeRule.onNodeWithText("这条内嵌子评论应展示").assertIsDisplayed()
         composeRule.onAllNodesWithTag("comment_row_blocked-root").assertCountEquals(0)
         composeRule.onAllNodesWithTag("comment_row_blocked-child").assertCountEquals(0)
-        composeRule.onAllNodesWithText("è¢«å±è½æ ¹è¯è®ºä½è").assertCountEquals(0)
-        composeRule.onAllNodesWithText("è¢«å±è½å­è¯è®ºä½è").assertCountEquals(0)
+        composeRule.onAllNodesWithText("被屏蔽根评论作者").assertCountEquals(0)
+        composeRule.onAllNodesWithText("被屏蔽子评论作者").assertCountEquals(0)
     }
 
     private fun setCommentScreen(
@@ -596,14 +596,14 @@ class CommentScreenInstrumentedTest {
                     author = DataHolder.Comment.Author(
                         id = "submitted-author-${submissions.size}",
                         urlToken = "submitted-author-${submissions.size}-token",
-                        name = "å½åç¨æ·",
+                        name = "当前用户",
                         avatarUrl = "https://example.invalid/avatar/submitted-${submissions.size}.png",
                         avatarUrlTemplate = "",
                         isOrg = false,
                         type = "people",
                         url = "https://www.zhihu.com/people/submitted-author-${submissions.size}-token",
                         userType = "people",
-                        headline = "å½åç¨æ·çç¦»çº¿ç­¾å",
+                        headline = "当前用户的离线签名",
                         gender = 0,
                         isAdvertiser = false,
                     ),
@@ -619,7 +619,7 @@ class CommentScreenInstrumentedTest {
     private fun seedRootComments(count: Int): List<DataHolder.Comment> = List(count) { index ->
         when (index) {
             0 -> seedRootComment(index = 1, childCommentCount = 2, withImage = true)
-            1 -> seedRootComment(index = 2, replyToAuthor = seedAuthor("reply-to-root-2", "reply-to-root-2-token", "è¢«åå¤ä½è 2"))
+            1 -> seedRootComment(index = 2, replyToAuthor = seedAuthor("reply-to-root-2", "reply-to-root-2-token", "被回复作者 2"))
             else -> seedRootComment(index = index + 1)
         }
     }
@@ -628,8 +628,8 @@ class CommentScreenInstrumentedTest {
         seedComment(
             id = "child-${index + 1}",
             authorId = "child-author-${index + 1}",
-            authorName = "å­åå¤ä½è ${index + 1}",
-            content = "å­åå¤åå®¹ ${index + 1}",
+            authorName = "子回复作者 ${index + 1}",
+            content = "子回复内容 ${index + 1}",
             likeCount = index + 1,
         )
     }
@@ -642,11 +642,11 @@ class CommentScreenInstrumentedTest {
     ): DataHolder.Comment = seedComment(
         id = "root-$index",
         authorId = "author-root-$index",
-        authorName = "ç¦»çº¿ä½è $index",
+        authorName = "离线作者 $index",
         content = if (withImage) {
-            "<p>æ ¹è¯è®ºåå®¹ $index</p><a class=\"comment_img\" href=\"https://example.invalid/comment-$index.jpg\">image</a>"
+            "<p>根评论内容 $index</p><a class=\"comment_img\" href=\"https://example.invalid/comment-$index.jpg\">image</a>"
         } else {
-            "æ ¹è¯è®ºåå®¹ $index"
+            "根评论内容 $index"
         },
         likeCount = if (index == 1) 5 else index,
         childCommentCount = childCommentCount,
@@ -655,8 +655,8 @@ class CommentScreenInstrumentedTest {
                 seedComment(
                     id = "root-$index-child-1",
                     authorId = "root-$index-child-author-1",
-                    authorName = "å­è¯è®ºä½è 1",
-                    content = "ååµå­è¯è®º 1",
+                    authorName = "子评论作者 1",
+                    content = "内嵌子评论 1",
                     likeCount = 1,
                 ),
             )
@@ -706,7 +706,7 @@ class CommentScreenInstrumentedTest {
         type = "people",
         url = "https://www.zhihu.com/people/$urlToken",
         userType = "people",
-        headline = "$name çç¦»çº¿ç­¾å",
+        headline = "$name 的离线签名",
         gender = 0,
         isAdvertiser = false,
     )
@@ -715,7 +715,7 @@ class CommentScreenInstrumentedTest {
         val ROOT_ARTICLE = Article(
             type = ArticleType.Answer,
             id = 9001L,
-            title = "ç¦»çº¿è¯è®ºå®¿ä¸»åç­",
+            title = "离线评论宿主回答",
         )
         val ROOT_ARTICLE_COMMENT_VIEW_MODEL_KEY = "article:${ROOT_ARTICLE.type}:${ROOT_ARTICLE.id}"
     }

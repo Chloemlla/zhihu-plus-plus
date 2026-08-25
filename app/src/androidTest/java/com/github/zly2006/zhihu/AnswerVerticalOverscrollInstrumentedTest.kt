@@ -98,10 +98,10 @@ class AnswerVerticalOverscrollInstrumentedTest {
                         .verticalScroll(scrollState)
                         .testTag(ANSWER_CONTENT_TAG),
                 ) {
-                    Text("ç¦»çº¿åç­æ­£æé¡¶é¨")
+                    Text("离线回答正文顶部")
                     Spacer(Modifier.height(1800.dp))
                     Text(
-                        text = "ç¦»çº¿åç­æ­£æåºé¨",
+                        text = "离线回答正文底部",
                         modifier = Modifier.testTag(ANSWER_BOTTOM_TAG),
                     )
                 }
@@ -159,10 +159,10 @@ class AnswerVerticalOverscrollInstrumentedTest {
                             .verticalScroll(scrollState)
                             .testTag(GEOMETRY_CONTENT_TAG),
                     ) {
-                        Text("ç¦»çº¿å ä½æµè¯æ­£æé¡¶é¨")
+                        Text("离线几何测试正文顶部")
                         Spacer(Modifier.height(1800.dp))
                         Text(
-                            text = "ç¦»çº¿å ä½æµè¯æ­£æåºé¨",
+                            text = "离线几何测试正文底部",
                             modifier = Modifier.testTag(GEOMETRY_BOTTOM_TAG),
                         )
                     }
@@ -245,13 +245,13 @@ class AnswerVerticalOverscrollInstrumentedTest {
             article = Article(
                 type = ArticleType.Answer,
                 id = 778L,
-                title = "ä¸ä¸ä¸ªç¦»çº¿åç­",
+                title = "下一个离线回答",
             ),
-            title = "ä¸ä¸ä¸ªç¦»çº¿åç­",
-            authorName = "ç¦»çº¿ä½è",
-            authorBio = "ç¦»çº¿ç­¾å",
+            title = "下一个离线回答",
+            authorName = "离线作者",
+            authorBio = "离线签名",
             authorAvatarUrl = "",
-            content = "ä¸ä¸ä¸ªç¦»çº¿åç­æ­£æ",
+            content = "下一个离线回答正文",
             voteUpCount = 1,
             commentCount = 2,
         )

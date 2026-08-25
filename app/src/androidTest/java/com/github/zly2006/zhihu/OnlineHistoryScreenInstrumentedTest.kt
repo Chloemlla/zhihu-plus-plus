@@ -77,11 +77,11 @@ class OnlineHistoryScreenInstrumentedTest {
     fun historyItemOverflowOffersSingleDeleteAction() {
         setOnlineHistoryScreen()
 
-        // The toolbar is the first "æ´å¤éé¡¹" node; the next one belongs to the first visible
+        // The toolbar is the first "更多选项" node; the next one belongs to the first visible
         // history card. Single-record deletion lives in that existing card menu rather than the
         // global toolbar menu.
-        composeRule.onAllNodesWithContentDescription("æ´å¤éé¡¹")[1].performClick()
-        composeRule.onNodeWithText("å é¤è¯¥æ¡åå²è®°å½").assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription("更多选项")[1].performClick()
+        composeRule.onNodeWithText("删除该条历史记录").assertIsDisplayed()
     }
 
     /**
@@ -113,7 +113,7 @@ class OnlineHistoryScreenInstrumentedTest {
                       "data": {
                         "header": {
                           "icon": "https://example.com/icon.png",
-                          "title": "å¾å é¤çå¨çº¿åå²"
+                          "title": "待删除的在线历史"
                         },
                         "action": {
                           "type": "router",
@@ -151,7 +151,7 @@ class OnlineHistoryScreenInstrumentedTest {
             viewModel.refresh(environment)
         }
         composeRule.waitUntil(timeoutMillis = 5_000) {
-            viewModel.displayItems.singleOrNull()?.title == "å¾å é¤çå¨çº¿åå²"
+            viewModel.displayItems.singleOrNull()?.title == "待删除的在线历史"
         }
 
         runBlocking {
@@ -175,10 +175,10 @@ class OnlineHistoryScreenInstrumentedTest {
                 List(itemCount) { index ->
                     FeedDisplayItem(
                         title = seedTitle(index + 1),
-                        summary = "ç¨äº OnlineHistoryScreen ä»ªå¨æµè¯çåºå®æè¦ ${index + 1}",
-                        details = "åºå®è¯¦æ ${index + 1}",
+                        summary = "用于 OnlineHistoryScreen 仪器测试的固定摘要 ${index + 1}",
+                        details = "固定详情 ${index + 1}",
                         feed = null,
-                        authorName = "ä½è ${index + 1}",
+                        authorName = "作者 ${index + 1}",
                     )
                 },
             )
@@ -196,6 +196,6 @@ class OnlineHistoryScreenInstrumentedTest {
     private companion object {
         const val LIST_TAG = "online_history_list"
 
-        fun seedTitle(index: Int) = "åºå®å¨çº¿åå²æ¡ç® $index"
+        fun seedTitle(index: Int) = "固定在线历史条目 $index"
     }
 }

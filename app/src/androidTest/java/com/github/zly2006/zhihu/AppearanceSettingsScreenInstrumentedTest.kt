@@ -100,9 +100,9 @@ class AppearanceSettingsScreenInstrumentedTest {
         assertFalse(preferences.getBoolean(COLLECTION_DIRECT_BROWSE_PREFERENCE_KEY, false))
         composeRule
             .onNodeWithTag(APPEARANCE_SETTINGS_COLLECTION_DIRECT_BROWSE_TAG)
-            .assertTextContains("æ¶èç´è¾¾æµè§ï¼æµè¯ï¼")
+            .assertTextContains("收藏直达浏览（测试）")
         composeRule
-            .onNode(hasText("è¯·è°¨æå¼å¯", substring = true), useUnmergedTree = true)
+            .onNode(hasText("请谨慎开启", substring = true), useUnmergedTree = true)
             .assertIsDisplayed()
         composeRule.onNodeWithTag(APPEARANCE_SETTINGS_COLLECTION_DIRECT_BROWSE_TAG).performClick()
 

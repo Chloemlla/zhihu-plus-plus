@@ -219,8 +219,8 @@ class ArticleScreenInstrumentedTest {
 
         injectSwipe(0.3f, 0.8f, 240)
         composeRule.waitForIdle()
-        composeRule.onNodeWithContentDescription("æ´å¤éé¡¹").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("å¤å¶é¾æ¥").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("更多选项").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("复制链接").assertIsDisplayed()
     }
 
     /**
@@ -232,7 +232,7 @@ class ArticleScreenInstrumentedTest {
         val warmupViewModel = seededAnswerViewModel(ANSWER)
         composeRule.activity.runOnUiThread {
             warmupViewModel.content =
-                """<p>é¢ç­æ­£æ <img src="https://www.zhihu.com/equation?tex=x%5E2" eeimg="1" /></p>"""
+                """<p>预热正文 <img src="https://www.zhihu.com/equation?tex=x%5E2" eeimg="1" /></p>"""
         }
         composeRule.setScreenContent {
             Scaffold(
@@ -245,7 +245,7 @@ class ArticleScreenInstrumentedTest {
                 )
             }
         }
-        composeRule.onNodeWithText("é¢ç­æ­£æ", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("预热正文", substring = true).assertIsDisplayed()
         composeRule.onRoot().captureToImage()
 
         val fullFixtureWarmupSamples = mutableListOf<Long>()
@@ -267,7 +267,7 @@ class ArticleScreenInstrumentedTest {
                         )
                     }
                 }
-                composeRule.onNodeWithText("æ´æ°ï¼", substring = true).assertIsDisplayed()
+                composeRule.onNodeWithText("更新：", substring = true).assertIsDisplayed()
                 composeRule.onRoot().captureToImage()
                 val elapsedMillis = SystemClock.elapsedRealtime() - startedAt
                 if (iteration < 2) {
@@ -300,9 +300,9 @@ class ArticleScreenInstrumentedTest {
             InstrumentationRegistry.getArguments().getString("markdownPerformance") == "true",
         )
         val scenarios = linkedMapOf(
-            "short-prose" to "ä¸æ®µæ®éæ­£æï¼ç¨äºè¦çæå¸¸è§çç­åç­ã",
+            "short-prose" to "一段普通正文，用于覆盖最常见的短回答。",
             "formatted-prose" to (1..30).joinToString("\n\n") { index ->
-                "ç¬¬ $index æ®µåå« **å ç²**ã*æä½*ã~~å é¤çº¿~~ å [é¾æ¥](https://example.com/$index)ã"
+                "第 $index 段包含 **加粗**、*斜体*、~~删除线~~ 和 [链接](https://example.com/$index)。"
             },
             "block-math" to (1..80).joinToString("\n\n") { index ->
                 "${'$'}${'$'}\\sum_{i=1}^{n} \\frac{x_i^{$index}}{1+x_i^2}${'$'}${'$'}"
@@ -409,7 +409,7 @@ class ArticleScreenInstrumentedTest {
                     appendLine(it)
                     appendLine()
                 }
-                appendLine("| æµè¯å |")
+                appendLine("| 测试列 |")
                 appendLine("| --- |")
                 appendLine("| $tableCell |")
                 appendLine()
@@ -459,8 +459,8 @@ class ArticleScreenInstrumentedTest {
                 scrollForwardToText(scrollContainer, target)
             }
 
-            // éé¡¹æ»å¨å·²ç»è®©æ´ç¯ææ¡£ççå® BlockRenderer è³å°æ³¨åè¿ä¸æ¬¡ï¼å¨éå¿é¡»è¦çå¨é¨
-            // åå®¹ï¼éåé¦é¨èç¹çéæ¯ãéå»ºåç¬¬äºæ¬¡éæ¯é½ä¸è½æ¹åé«äº®æå¤å¶ç»æã
+            // 逐项滚动已经让整篇文档的真实 BlockRenderer 至少注册过一次；全选必须覆盖全部
+            // 内容，随后首部节点的销毁、重建和第二次销毁都不能改变高亮或复制结果。
             scrollToText(scrollContainer, secondParagraph)
             composeRule.onNodeWithText(secondParagraph).performTouchInput { longClick() }
             composeRule.runOnIdle {
@@ -717,7 +717,7 @@ class ArticleScreenInstrumentedTest {
             composeRule
                 .onNodeWithText(HIGHLIGHTED_PARAGRAPH)
                 .performTouchInput { longClick() }
-            composeRule.onNodeWithText("åçº¿çæ®µ").assertDoesNotExist()
+            composeRule.onNodeWithText("划线片段").assertDoesNotExist()
 
             val selectionImage = composeRule
                 .onNodeWithTag("highlighted-selection-article")
@@ -781,7 +781,7 @@ class ArticleScreenInstrumentedTest {
                 .onNodeWithText(HIGHLIGHTED_PARAGRAPH)
                 .performTouchInput { longClick() }
             val endHandle = composeRule.onNode(
-                SemanticsMatcher("æ¯åçº¿æ®µè½éåºæ«ç«¯ææ") { node ->
+                SemanticsMatcher("是划线段落选区末端手柄") { node ->
                     node.config.any { (key, value) ->
                         key.name == "SelectionHandleInfo" && value.toString().contains("SelectionEnd")
                     }
@@ -857,8 +857,8 @@ class ArticleScreenInstrumentedTest {
         composeRule
             .onNodeWithText(HIGHLIGHTED_PARAGRAPH)
             .performTouchInput { click() }
-        composeRule.onNodeWithText("åçº¿çæ®µ").assertIsDisplayed()
-        composeRule.onNodeWithText("â$HIGHLIGHTED_PARAGRAPHâ").assertIsDisplayed()
+        composeRule.onNodeWithText("划线片段").assertIsDisplayed()
+        composeRule.onNodeWithText("“$HIGHLIGHTED_PARAGRAPH”").assertIsDisplayed()
         composeRule.onNodeWithTag("segment_action_sheet_top_divider").assertDoesNotExist()
         composeRule.onNodeWithTag("segment_action_sheet_bottom_divider").assertDoesNotExist()
     }
@@ -880,9 +880,9 @@ class ArticleScreenInstrumentedTest {
             .onNodeWithText(SPANNING_HIGHLIGHT_SECOND)
             .performTouchInput { click() }
 
-        composeRule.onNodeWithText("åçº¿çæ®µ").assertIsDisplayed()
+        composeRule.onNodeWithText("划线片段").assertIsDisplayed()
         composeRule
-            .onNodeWithText("â$SPANNING_HIGHLIGHT_FIRST\n\n$SPANNING_HIGHLIGHT_SECONDâ")
+            .onNodeWithText("“$SPANNING_HIGHLIGHT_FIRST\n\n$SPANNING_HIGHLIGHT_SECOND”")
             .assertIsDisplayed()
     }
 
@@ -910,12 +910,12 @@ class ArticleScreenInstrumentedTest {
             .onNodeWithText(SPANNING_HIGHLIGHT_SECOND)
             .performTouchInput { click() }
 
-        val text = composeRule.onNodeWithText("â$longDisplayTextâ")
+        val text = composeRule.onNodeWithText("“$longDisplayText”")
         text.fetchSemanticsNode()
         composeRule.onNodeWithTag("segment_action_sheet_top_divider").assertDoesNotExist()
         composeRule.onNodeWithTag("segment_action_sheet_bottom_divider").assertIsDisplayed()
         composeRule.onNodeWithText("15").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("å¤å¶åå®¹").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("复制内容").assertIsDisplayed()
 
         scrollToBoundary(text, end = true)
         val finalScrollRange = text
@@ -926,7 +926,7 @@ class ArticleScreenInstrumentedTest {
         composeRule.onNodeWithTag("segment_action_sheet_top_divider").assertIsDisplayed()
         composeRule.onNodeWithTag("segment_action_sheet_bottom_divider").assertDoesNotExist()
         composeRule.onNodeWithText("15").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("å¤å¶åå®¹").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("复制内容").assertIsDisplayed()
     }
 
     /**
@@ -957,8 +957,8 @@ class ArticleScreenInstrumentedTest {
         }
         paragraph.performTouchInput { click(highlightCenter) }
 
-        composeRule.onNodeWithText("åçº¿çæ®µ").assertIsDisplayed()
-        composeRule.onNodeWithText("â$FORMATTED_HIGHLIGHTâ").assertIsDisplayed()
+        composeRule.onNodeWithText("划线片段").assertIsDisplayed()
+        composeRule.onNodeWithText("“$FORMATTED_HIGHLIGHT”").assertIsDisplayed()
     }
 
     /**
@@ -1049,8 +1049,8 @@ class ArticleScreenInstrumentedTest {
         composeRule
             .onNodeWithText(HIGHLIGHTED_PARAGRAPH)
             .performTouchInput { click() }
-        composeRule.onNodeWithText("åçº¿çæ®µ").assertIsDisplayed()
-        composeRule.onNodeWithText("â$HIGHLIGHTED_PARAGRAPHâ").assertIsDisplayed()
+        composeRule.onNodeWithText("划线片段").assertIsDisplayed()
+        composeRule.onNodeWithText("“$HIGHLIGHTED_PARAGRAPH”").assertIsDisplayed()
     }
 
     /**
@@ -1074,7 +1074,7 @@ class ArticleScreenInstrumentedTest {
                 moveBy(Offset(0f, -100f))
                 up()
             }
-        composeRule.onNodeWithText("åçº¿çæ®µ").assertDoesNotExist()
+        composeRule.onNodeWithText("划线片段").assertDoesNotExist()
     }
 
     /**
@@ -1089,7 +1089,7 @@ class ArticleScreenInstrumentedTest {
         try {
             val textToolbar = CapturingTextToolbar()
             val selectionColor = Color.Magenta
-            val paragraph = "é¿æ®µè½çéä¸­èæ¯å¿é¡»è·éçå®æ¢è¡ï¼".repeat(12)
+            val paragraph = "长段落的选中背景必须跟随真实换行，".repeat(12)
             composeRule.setScreenContent {
                 CompositionLocalProvider(
                     LocalTextToolbar provides textToolbar,
@@ -1109,7 +1109,7 @@ class ArticleScreenInstrumentedTest {
             }
 
             composeRule
-                .onNodeWithText("é¿æ®µè½çéä¸­èæ¯", substring = true)
+                .onNodeWithText("长段落的选中背景", substring = true)
                 .performTouchInput { longClick() }
             composeRule.runOnIdle {
                 requireNotNull(textToolbar.onSelectAllRequested).invoke()
@@ -1171,11 +1171,11 @@ class ArticleScreenInstrumentedTest {
                     RenderMarkdownText(
                         markdown =
                             """
-                            èµ·å§æ®µè½ä»è¿éå¼å§æå¨ã
+                            起始段落从这里开始拖动。
 
-                            ä¸­é´æ®µè½ç¡®ä¿éåºè·¨è¶å¤ä¸ªæå­åã
+                            中间段落确保选区跨越多个文字块。
 
-                            æ«æ®µæå¨å¿é¡»å°è¾¾è¿éã
+                            末段拖动必须到达这里。
                             """.trimIndent(),
                         modifier = androidx.compose.ui.Modifier
                             .width(280.dp),
@@ -1185,21 +1185,21 @@ class ArticleScreenInstrumentedTest {
             }
 
             composeRule
-                .onNodeWithText("èµ·å§æ®µè½ä»è¿éå¼å§æå¨ã")
+                .onNodeWithText("起始段落从这里开始拖动。")
                 .performTouchInput { longClick() }
 
-            // AndroidX çææè¯­ä¹ key ä»æ¯ internalï¼æµè¯æ key åå¹éçå®å¼¹åºå±ï¼
-            // é¿åå¦åä¸å¥éåºè®¡ç®æ¥åè£éªè¯æå¨ã
+            // AndroidX 的手柄语义 key 仍是 internal，测试按 key 名匹配真实弹出层，
+            // 避免另写一套选区计算来假装验证拖动。
             // https://cs.android.com/androidx/platform/frameworks/support/+/androidx-main:compose/foundation/foundation/src/commonMain/kotlin/androidx/compose/foundation/text/selection/SelectionHandles.kt
             val endHandle = composeRule.onNode(
-                SemanticsMatcher("æ¯éåºæ«ç«¯ææ") { node ->
+                SemanticsMatcher("是选区末端手柄") { node ->
                     node.config.any { (key, value) ->
                         key.name == "SelectionHandleInfo" && value.toString().contains("SelectionEnd")
                     }
                 },
             )
             val targetBounds = composeRule
-                .onNodeWithText("æ«æ®µæå¨å¿é¡»å°è¾¾è¿éã")
+                .onNodeWithText("末段拖动必须到达这里。")
                 .fetchSemanticsNode()
                 .boundsInWindow
             val handleBounds = endHandle.fetchSemanticsNode().boundsInWindow
@@ -1221,13 +1221,13 @@ class ArticleScreenInstrumentedTest {
                 up()
             }
             waitUntilSelectionHighlight(
-                text = "æ«æ®µæå¨å¿é¡»å°è¾¾è¿éã",
+                text = "末段拖动必须到达这里。",
                 failureMessage = "Selection did not reach the final block after dragging the handle",
             )
             val copiedText = copySelection(textToolbar, clipboard)
             assertTrue(
                 "Dragging the standard selection handle must reach later blocks through the same selection layer",
-                copiedText.contains("èµ·å§æ®µè½") && copiedText.contains("æ«æ®µæå¨å¿é¡»å°è¾¾è¿é"),
+                copiedText.contains("起始段落") && copiedText.contains("末段拖动必须到达这里"),
             )
         } finally {
             ComposeFoundationFlags.isNewContextMenuEnabled = previousContextMenuFlag
@@ -1254,8 +1254,8 @@ class ArticleScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithText("æ´æ°ï¼", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("ååå»", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("更新：", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("再减去", substring = true).assertDoesNotExist()
         val scrollContainer = composeRule.onNode(
             SemanticsMatcher("has vertical scroll axis") { node ->
                 node.config.contains(SemanticsProperties.VerticalScrollAxisRange)
@@ -1268,7 +1268,7 @@ class ArticleScreenInstrumentedTest {
         var remainingScrolls = 30
         while (
             remainingScrolls-- > 0 &&
-            composeRule.onAllNodesWithText("ååå»", substring = true).fetchSemanticsNodes().isEmpty()
+            composeRule.onAllNodesWithText("再减去", substring = true).fetchSemanticsNodes().isEmpty()
         ) {
             scrollContainer.performSemanticsAction(SemanticsActions.ScrollBy) { scrollBy ->
                 scrollBy(0f, 4_000f)
@@ -1276,9 +1276,9 @@ class ArticleScreenInstrumentedTest {
             composeRule.waitForIdle()
         }
 
-        composeRule.onNodeWithText("ååå»", substring = true).assertExists()
-        composeRule.onNodeWithText("æ´æ°ï¼", substring = true).assertDoesNotExist()
-        composeRule.onNodeWithText("IPå±å°ï¼ä¸æµ·").assertExists()
+        composeRule.onNodeWithText("再减去", substring = true).assertExists()
+        composeRule.onNodeWithText("更新：", substring = true).assertDoesNotExist()
+        composeRule.onNodeWithText("IP属地：上海").assertExists()
 
         var scrollToEndAttempts = 60
         while (scrollToEndAttempts-- > 0) {
@@ -1319,7 +1319,7 @@ class ArticleScreenInstrumentedTest {
             RenderImage(
                 data = MarkdownImageData(
                     url = "https://invalid.invalid/not-loaded.jpg",
-                    altText = "æªå è½½çæ¯ä¾å¾ç",
+                    altText = "未加载的比例图片",
                     width = 1200,
                     height = 880,
                 ),
@@ -1328,7 +1328,7 @@ class ArticleScreenInstrumentedTest {
         }
 
         val imageBounds = composeRule
-            .onNodeWithContentDescription("æªå è½½çæ¯ä¾å¾ç")
+            .onNodeWithContentDescription("未加载的比例图片")
             .fetchSemanticsNode()
             .boundsInRoot
         assertTrue("Image width must be reserved before loading", imageBounds.width > 0f)
@@ -1347,13 +1347,13 @@ class ArticleScreenInstrumentedTest {
     @Test
     fun footnoteReferenceAndBackLinkNavigateInsideOuterArticleScroll() {
         val markdown = buildString {
-            appendLine("æ­£æå¼å¤´èæ³¨[^note]")
+            appendLine("正文开头脚注[^note]")
             appendLine()
             repeat(60) { index ->
-                appendLine("å¡«åæ®µè½ $indexï¼ç¨äºç¡®ä¿èæ³¨å®ä¹ä½äºå½åå±å¹ä¹å¤ã")
+                appendLine("填充段落 $index：用于确保脚注定义位于当前屏幕之外。")
                 appendLine()
             }
-            appendLine("[^note]: èæ³¨åå®¹")
+            appendLine("[^note]: 脚注内容")
         }
 
         composeRule.setScreenContent {
@@ -1375,9 +1375,9 @@ class ArticleScreenInstrumentedTest {
             .onAllNodesWithText("[1]", useUnmergedTree = true)[0]
             .assertIsDisplayed()
             .performClick()
-        composeRule.onNodeWithText("èæ³¨åå®¹").assertIsDisplayed()
-        composeRule.onNodeWithText("â©").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("æ­£æå¼å¤´èæ³¨", substring = true).assertIsDisplayed()
+        composeRule.onNodeWithText("脚注内容").assertIsDisplayed()
+        composeRule.onNodeWithText("↩").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("正文开头脚注", substring = true).assertIsDisplayed()
     }
 
     /**
@@ -1400,9 +1400,9 @@ class ArticleScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithText("è¯é¢æ¶å½ æçå¼æºåç").assertIsDisplayed()
-        composeRule.onNodeWithText("åä½å£°æ: åå®¹åå«å§é").assertIsDisplayed()
-        composeRule.onNodeWithText("æ¶å½äºè¯é¢: ç§æ").assertIsDisplayed()
+        composeRule.onNodeWithText("话题收录 我的开源名片").assertIsDisplayed()
+        composeRule.onNodeWithText("创作声明: 内容包含剧透").assertIsDisplayed()
+        composeRule.onNodeWithText("收录于话题: 科技").assertIsDisplayed()
     }
 
     /**
@@ -1437,14 +1437,14 @@ class ArticleScreenInstrumentedTest {
                     ReadingQueueItem(
                         contentType = ReadingContentType.Answer,
                         id = ANSWER.id,
-                        title = "ç¦»çº¿ Answer æ é¢",
-                        author = "ç¦»çº¿ç­ä¸»",
+                        title = "离线 Answer 标题",
+                        author = "离线答主",
                     ),
                     ReadingQueueItem(
                         contentType = ReadingContentType.Answer,
                         id = NEXT_ANSWER.id,
-                        title = "ä¸ä¸ä¸ªç¦»çº¿åç­",
-                        author = "ä¸ä¸ä¸ªä½è",
+                        title = "下一个离线回答",
+                        author = "下一个作者",
                     ),
                 ),
                 currentIndex = 1,
@@ -1462,11 +1462,11 @@ class ArticleScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("æ´å¤éé¡¹").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("åæ­¢æè¯»").assertIsDisplayed()
-        composeRule.onNodeWithText("æåæè¯»").assertDoesNotExist()
-        composeRule.onNodeWithText("ç»§ç»­æè¯»").assertDoesNotExist()
-        composeRule.onNodeWithText("åæ­¢æè¯»").performClick()
+        composeRule.onNodeWithContentDescription("更多选项").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("停止朗读").assertIsDisplayed()
+        composeRule.onNodeWithText("暂停朗读").assertDoesNotExist()
+        composeRule.onNodeWithText("继续朗读").assertDoesNotExist()
+        composeRule.onNodeWithText("停止朗读").performClick()
         composeRule.waitUntil(timeoutMillis = 5_000) {
             !AndroidReadingPlayerBridge.state.value.hasSession
         }
@@ -1482,7 +1482,7 @@ class ArticleScreenInstrumentedTest {
         val snapshotCurrentId = AtomicLong(-1L)
         val snapshotLimit = AtomicInteger(0)
         val sharedNavigator = object : AnswerNavigator(
-            sourceName = "æ­¤é®é¢",
+            sourceName = "此问题",
             environment = NO_OP_API_ENVIRONMENT,
         ) {
             override suspend fun loadNext(): Article? = null
@@ -1516,8 +1516,8 @@ class ArticleScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("æ´å¤éé¡¹").assertIsDisplayed().performClick()
-        composeRule.onNodeWithText("å¼å§è¿ç»­æè¯»").assertIsDisplayed().performClick()
+        composeRule.onNodeWithContentDescription("更多选项").assertIsDisplayed().performClick()
+        composeRule.onNodeWithText("开始连续朗读").assertIsDisplayed().performClick()
 
         waitForReadingQueue(listOf(ANSWER.id, NEXT_ANSWER.id, 779L))
         assertEquals(ANSWER.id, snapshotCurrentId.get())
@@ -1533,17 +1533,17 @@ class ArticleScreenInstrumentedTest {
         val viewModel = seededAnswerViewModel(ANSWER)
         val nextAnswer = ArticleViewModel.CachedAnswerContent(
             article = NEXT_ANSWER,
-            title = "ä¸ä¸ä¸ªç¦»çº¿åç­",
-            authorName = "ä¸ä¸ä¸ªä½è",
-            authorBio = "ä¸ä¸ä¸ªç­¾å",
+            title = "下一个离线回答",
+            authorName = "下一个作者",
+            authorBio = "下一个签名",
             authorAvatarUrl = "",
-            content = "ä¸ä¸ä¸ªç¦»çº¿åç­æ­£æ",
+            content = "下一个离线回答正文",
             voteUpCount = 7,
             commentCount = 3,
         )
         composeRule.activity.runOnUiThread {
             composeRule.activity.articleAnswerSwitchState.pendingNavigator = object : AnswerNavigator(
-                sourceName = "æ­¤é®é¢",
+                sourceName = "此问题",
                 environment = NO_OP_API_ENVIRONMENT,
             ) {
                 init {
@@ -1571,7 +1571,7 @@ class ArticleScreenInstrumentedTest {
         }
 
         composeRule
-            .onNodeWithContentDescription("ä¸ä¸ä¸ªåç­")
+            .onNodeWithContentDescription("下一个回答")
             .assertIsDisplayed()
             .performClick()
 
@@ -1622,19 +1622,19 @@ class ArticleScreenInstrumentedTest {
             httpClient = null,
         )
         composeRule.activity.runOnUiThread {
-            viewModel.title = "ç¦»çº¿ Article æ é¢"
-            viewModel.authorName = "ç¦»çº¿ä½è"
+            viewModel.title = "离线 Article 标题"
+            viewModel.authorName = "离线作者"
             viewModel.authorId = "offline-author-id"
             viewModel.authorUrlToken = "offline-author"
             viewModel.content = (1..20).joinToString("\n\n") { index ->
-                "ç¬¬ $index æ®µç¦»çº¿æ­£æï¼ç¨äº ArticleScreen instrumented testã"
+                "第 $index 段离线正文，用于 ArticleScreen instrumented test。"
             }
             viewModel.voteUpCount = 42
             viewModel.commentCount = 7
             viewModel.questionId = 123456L
             viewModel.createdAt = 1_710_000_000L
             viewModel.updatedAt = 1_710_000_600L
-            viewModel.ipInfo = "ä¸æµ·"
+            viewModel.ipInfo = "上海"
         }
         composeRule.setScreenContent {
             Scaffold(
@@ -1687,7 +1687,7 @@ class ArticleScreenInstrumentedTest {
 
     private fun dragSkipAnswerButtonBy(deltaX: Float) {
         composeRule
-            .onNodeWithContentDescription("ä¸ä¸ä¸ªåç­")
+            .onNodeWithContentDescription("下一个回答")
             .assertIsDisplayed()
             .performTouchInput {
                 down(center)
@@ -1718,22 +1718,22 @@ class ArticleScreenInstrumentedTest {
             httpClient = null,
         )
         composeRule.activity.runOnUiThread {
-            viewModel.title = "ç¦»çº¿ Answer æ é¢"
-            viewModel.authorName = "ç¦»çº¿ç­ä¸»"
+            viewModel.title = "离线 Answer 标题"
+            viewModel.authorName = "离线答主"
             viewModel.authorId = "offline-answer-author-id"
             viewModel.authorUrlToken = "offline-answer-author"
             viewModel.content = (1..20).joinToString("\n\n") { index ->
-                "ç¬¬ $index æ®µç¦»çº¿åç­æ­£æï¼ç¨äº ArticleScreen instrumented testã"
+                "第 $index 段离线回答正文，用于 ArticleScreen instrumented test。"
             }
             viewModel.voteUpCount = 42
             viewModel.commentCount = 7
             viewModel.questionId = 123456L
             viewModel.createdAt = 1_710_000_000L
             viewModel.updatedAt = 1_710_000_600L
-            viewModel.ipInfo = "ä¸æµ·"
+            viewModel.ipInfo = "上海"
             viewModel.endorsements = listOf(
                 DataHolder.AnswerEndorsementDisplay(
-                    text = "è¯é¢æ¶å½ æçå¼æºåç",
+                    text = "话题收录 我的开源名片",
                     backgroundColor = DataHolder.AnswerEndorsementColor(alpha = 0.1f, group = "GYL02A"),
                     textColor = DataHolder.AnswerEndorsementColor(group = "GYL02A"),
                     leadingIconKey = "zhicon_icon_24_chat_bubble_hash_fill",
@@ -1741,13 +1741,13 @@ class ArticleScreenInstrumentedTest {
                     trailingIconKey = "zhicon_icon_16_arrow_right",
                 ),
                 DataHolder.AnswerEndorsementDisplay(
-                    text = "åä½å£°æ: åå®¹åå«å§é",
+                    text = "创作声明: 内容包含剧透",
                     backgroundColor = DataHolder.AnswerEndorsementColor(alpha = 0.1f, group = "GBL01A"),
                     textColor = DataHolder.AnswerEndorsementColor(group = "GBL07A"),
                     trailingIconKey = "zhicon_icon_16_arrow_down",
                 ),
                 DataHolder.AnswerEndorsementDisplay(
-                    text = "æ¶å½äºè¯é¢: ç§æ",
+                    text = "收录于话题: 科技",
                 ),
             )
         }
@@ -1773,17 +1773,17 @@ class ArticleScreenInstrumentedTest {
         const val ISSUE_495_BENCHMARK_TAG = "Issue495Benchmark"
         const val ISSUE_495_FIRST_FRAME_LIMIT_MS = 5_000L
         const val HIGHLIGHTED_PARAGRAPH =
-            "ç®åç°åº¦æºå¶æ¯å¨OpenCodeä¸ï¼è¢«éä¸­çè´¦å·è°ç¨deepseek-v4-proædeepseek-v4-flashææºä¼æ¿å°GAçã"
-        const val HIGHLIGHT_SELECTION_TARGET = "åç»­æ®éæ®µè½ç¨äºéªè¯æå¨ææè·¨è¶æå­åã"
-        const val SPANNING_HIGHLIGHT_FIRST = "ç¬¬ä¸æ®µè·¨æ®µåçº¿åå®¹ã"
-        const val SPANNING_HIGHLIGHT_SECOND = "ç¬¬äºæ®µè·¨æ®µåçº¿åå®¹ã"
+            "目前灰度机制是在OpenCode上，被选中的账号调用deepseek-v4-pro或deepseek-v4-flash有机会拿到GA版。"
+        const val HIGHLIGHT_SELECTION_TARGET = "后续普通段落用于验证拖动手柄跨越文字块。"
+        const val SPANNING_HIGHLIGHT_FIRST = "第一段跨段划线内容。"
+        const val SPANNING_HIGHLIGHT_SECOND = "第二段跨段划线内容。"
         const val FORMATTED_HIGHLIGHT_PREFIX = "WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW"
-        const val FORMATTED_HIGHLIGHT = "åçº¿å½ä¸­"
-        const val FORMATTED_HIGHLIGHT_PARAGRAPH = "$FORMATTED_HIGHLIGHT_PREFIX$FORMATTED_HIGHLIGHT åç¼"
-        const val WRAPPED_HIGHLIGHT_PREFIX = "æ®éåç¼ "
+        const val FORMATTED_HIGHLIGHT = "划线命中"
+        const val FORMATTED_HIGHLIGHT_PARAGRAPH = "$FORMATTED_HIGHLIGHT_PREFIX$FORMATTED_HIGHLIGHT 后缀"
+        const val WRAPPED_HIGHLIGHT_PREFIX = "普通前缀 "
         const val WRAPPED_HIGHLIGHT =
-            "è¿æ¯ä½äºæ®µè½ä¸­é´å¹¶ä¸éè¦è·¨è¶å¤ä¸ªè§è§è¡çåçº¿åå®¹ï¼ç¨äºéªè¯æ¯ä¸è¡é½è½å®æ´ç»å¶èçº¿ã"
-        const val WRAPPED_HIGHLIGHT_SUFFIX = " æ®éåç¼"
+            "这是位于段落中间并且需要跨越多个视觉行的划线内容，用于验证每一行都能完整绘制虚线。"
+        const val WRAPPED_HIGHLIGHT_SUFFIX = " 普通后缀"
         const val WRAPPED_HIGHLIGHT_PARAGRAPH =
             "$WRAPPED_HIGHLIGHT_PREFIX$WRAPPED_HIGHLIGHT$WRAPPED_HIGHLIGHT_SUFFIX"
         val HIGHLIGHTED_PARAGRAPH_HTML =
@@ -1832,7 +1832,7 @@ class ArticleScreenInstrumentedTest {
                 data-highlight-like-count="1"
                 data-highlight-comment-count="1"
                 data-highlight-content-id="777"
-                data-highlight-content-type="answer">$FORMATTED_HIGHLIGHT</span> åç¼</p>
+                data-highlight-content-type="answer">$FORMATTED_HIGHLIGHT</span> 后缀</p>
             """.trimIndent()
         val WRAPPED_HIGHLIGHT_PARAGRAPH_HTML =
             """
@@ -1847,17 +1847,17 @@ class ArticleScreenInstrumentedTest {
         val ARTICLE = Article(
             type = ArticleType.Article,
             id = 777L,
-            title = "ç¦»çº¿ Article æ é¢",
+            title = "离线 Article 标题",
         )
         val ANSWER = Article(
             type = ArticleType.Answer,
             id = 777L,
-            title = "ç¦»çº¿ Answer æ é¢",
+            title = "离线 Answer 标题",
         )
         val NEXT_ANSWER = Article(
             type = ArticleType.Answer,
             id = 778L,
-            title = "ä¸ä¸ä¸ªç¦»çº¿åç­",
+            title = "下一个离线回答",
         )
 
         val NO_OP_API_ENVIRONMENT = object : ZhihuApiEnvironment {

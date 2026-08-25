@@ -57,7 +57,7 @@ class CollectionScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(CREATE_COLLECTION_DIALOG_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(CREATE_COLLECTION_TITLE_INPUT_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("æ°å»ºæ¶èå¤¹").assertIsDisplayed()
+        composeRule.onNodeWithText("新建收藏夹").assertIsDisplayed()
     }
 
     /**
@@ -68,12 +68,12 @@ class CollectionScreenInstrumentedTest {
     fun onlySelectedNonDefaultCollectionOffersDeleteConfirmation() {
         val defaultCollection = Collection(
             id = "default-collection",
-            title = "é»è®¤æ¶èå¤¹",
+            title = "默认收藏夹",
             isDefault = true,
         )
         val selectedCollection = Collection(
             id = "selected-collection",
-            title = "å¾å é¤æ¶èå¤¹",
+            title = "待删除收藏夹",
         )
         setCollectionScreen(listOf(defaultCollection, selectedCollection))
 
@@ -91,7 +91,7 @@ class CollectionScreenInstrumentedTest {
             .onNodeWithTag(collectionDeleteConfirmTag(selectedCollection.id))
             .assertIsDisplayed()
         composeRule
-            .onNodeWithText("å é¤åæ æ³æ¢å¤ï¼ç¡®è®¤å é¤æ¶èå¤¹â${selectedCollection.title}âåï¼")
+            .onNodeWithText("删除后无法恢复，确认删除收藏夹“${selectedCollection.title}”吗？")
             .assertIsDisplayed()
     }
 
@@ -103,12 +103,12 @@ class CollectionScreenInstrumentedTest {
     fun directBrowseSupportsPullRefreshAndDeleteConfirmation() {
         val defaultCollection = Collection(
             id = "direct-default",
-            title = "ç´è¾¾é»è®¤æ¶èå¤¹",
+            title = "直达默认收藏夹",
             isDefault = true,
         )
         val deletableCollection = Collection(
             id = "direct-deletable",
-            title = "ç´è¾¾å¾å é¤æ¶èå¤¹",
+            title = "直达待删除收藏夹",
         )
         composeRule.setScreenContent {
             CollectionBrowseScreen(
@@ -119,10 +119,10 @@ class CollectionScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(COLLECTION_BROWSE_PULL_TO_REFRESH_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(COLLECTION_BROWSE_MODE_BUTTON_TAG).assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("å½åä¸ºé¡ºåºæ¨¡å¼ï¼ç¹å»åæ¢ä¸ºéæºæ¨¡å¼").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("当前为顺序模式，点击切换为随机模式").assertIsDisplayed()
         composeRule.onNodeWithTag(COLLECTION_BROWSE_RANDOM_REFRESH_BUTTON_TAG).assertDoesNotExist()
         composeRule.onNodeWithTag(COLLECTION_BROWSE_MODE_BUTTON_TAG).performClick()
-        composeRule.onNodeWithContentDescription("å½åä¸ºéæºæ¨¡å¼ï¼ç¹å»åæ¢ä¸ºé¡ºåºæ¨¡å¼").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("当前为随机模式，点击切换为顺序模式").assertIsDisplayed()
         composeRule.onNodeWithTag(COLLECTION_BROWSE_RANDOM_REFRESH_BUTTON_TAG).assertIsDisplayed().performClick()
         composeRule.onNodeWithTag(COLLECTION_BROWSE_MODE_BUTTON_TAG).performClick()
         composeRule.onNodeWithTag(COLLECTION_BROWSE_RANDOM_REFRESH_BUTTON_TAG).assertDoesNotExist()
@@ -133,7 +133,7 @@ class CollectionScreenInstrumentedTest {
         composeRule.onNodeWithTag(collectionBrowseDeleteDialogTag(deletableCollection.id)).assertIsDisplayed()
         composeRule.onNodeWithTag(collectionBrowseDeleteConfirmTag(deletableCollection.id)).assertIsDisplayed()
         composeRule
-            .onNodeWithText("å é¤åæ æ³æ¢å¤ï¼ç¡®è®¤å é¤æ¶èå¤¹â${deletableCollection.title}âåï¼")
+            .onNodeWithText("删除后无法恢复，确认删除收藏夹“${deletableCollection.title}”吗？")
             .assertIsDisplayed()
     }
 
@@ -148,8 +148,8 @@ class CollectionScreenInstrumentedTest {
         val collectionIndex = index + 1
         Collection(
             id = "collection-$collectionIndex",
-            title = "åºå®æ¶èå¤¹ $collectionIndex",
-            description = "ç¨äº CollectionScreen ä»ªå¨æµè¯çåºå®æ¶èå¤¹ $collectionIndex",
+            title = "固定收藏夹 $collectionIndex",
+            description = "用于 CollectionScreen 仪器测试的固定收藏夹 $collectionIndex",
             itemCount = collectionIndex * 3,
             likeCount = collectionIndex * 5,
             commentCount = collectionIndex,

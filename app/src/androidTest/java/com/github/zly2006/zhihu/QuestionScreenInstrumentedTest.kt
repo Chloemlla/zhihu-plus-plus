@@ -102,13 +102,13 @@ class QuestionScreenInstrumentedTest {
 
         setScreen()
 
-        composeRule.waitUntilTextExists("345 æµè§")
+        composeRule.waitUntilTextExists("345 浏览")
         composeRule
             .onNodeWithTag(QUESTION_SCREEN_LIST_TAG)
             .performScrollToNode(hasTestTag(QUESTION_WRITE_ANSWER_BUTTON_TAG))
         composeRule.onNodeWithTag(QUESTION_WRITE_ANSWER_BUTTON_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(QUESTION_FOLLOW_BUTTON_TAG).assertIsDisplayed()
-        composeRule.onNodeWithText("12 åç­").assertIsDisplayed()
+        composeRule.onNodeWithText("12 回答").assertIsDisplayed()
         composeRule.onNodeWithTag(QUESTION_SORT_DEFAULT_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(QUESTION_SORT_UPDATED_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(QUESTION_DETAIL_CONTENT_TAG).assertDoesNotExist()
@@ -162,16 +162,16 @@ class QuestionScreenInstrumentedTest {
     @Test
     fun longQuestionDetailRemainsVisibleAfterReturnFromAnswerList() {
         val lastDetailParagraph =
-            "é®é¢è¯¦æåå½æ®µè½ 36ï¼è¿æ¯ä¸æ®µè¶³å¤é¿çæ­£æï¼ç¨äºè¦çè¶è¿å±å¹é«åº¦çé®é¢æè¿°æ»å¨åºæ¯ã"
+            "问题详情回归段落 36：这是一段足够长的正文，用于覆盖超过屏幕高度的问题描述滚动场景。"
         val detail = (1..36).joinToString("") { index ->
-            "<p>é®é¢è¯¦æåå½æ®µè½ $indexï¼è¿æ¯ä¸æ®µè¶³å¤é¿çæ­£æï¼ç¨äºè¦çè¶è¿å±å¹é«åº¦çé®é¢æè¿°æ»å¨åºæ¯ã</p>"
+            "<p>问题详情回归段落 $index：这是一段足够长的正文，用于覆盖超过屏幕高度的问题描述滚动场景。</p>"
         }
         mockQuestionDetail(detail = detail)
         val viewModel = seedQuestionViewModel(itemCount = 24)
         val farAnswerTag = "question_feed_item_${viewModel.displayItems[12].stableKey}"
         setScreen()
 
-        composeRule.waitUntilTextExists("345 æµè§")
+        composeRule.waitUntilTextExists("345 浏览")
         composeRule
             .onNodeWithTag(QUESTION_SCREEN_LIST_TAG)
             .performScrollToNode(hasTestTag(QUESTION_DETAIL_TOGGLE_TAG))
@@ -205,33 +205,33 @@ class QuestionScreenInstrumentedTest {
         val viewModel = TestableQuestionFeedViewModel(123456789L)
         runBlocking {
             val database = getContentFilterDatabase(composeRule.activity)
-            database.blockedUserDao().insertUser(BlockedUser("blocked-answer-author", "è¢«å±è½åç­ä½è"))
+            database.blockedUserDao().insertUser(BlockedUser("blocked-answer-author", "被屏蔽回答作者"))
             viewModel.processForTest(
                 composeRule.activity,
                 listOf(
                     seedAnswerFeed(
                         id = 1L,
                         authorId = "blocked-answer-author",
-                        authorName = "è¢«å±è½åç­ä½è",
-                        excerpt = "è¿æ¡åç­ä¸åºå±ç¤º",
+                        authorName = "被屏蔽回答作者",
+                        excerpt = "这条回答不应展示",
                     ),
                     seedAnswerFeed(
                         id = 2L,
                         authorId = "allowed-answer-author",
-                        authorName = "å¯è§åç­ä½è",
-                        excerpt = "è¿æ¡åç­åºå±ç¤º",
+                        authorName = "可见回答作者",
+                        excerpt = "这条回答应展示",
                     ),
                 ),
             )
         }
 
-        assertEquals(listOf("å¯è§åç­ä½è"), viewModel.displayItems.map { it.authorName })
-        assertEquals(listOf("è¿æ¡åç­åºå±ç¤º"), viewModel.displayItems.map { it.summary })
+        assertEquals(listOf("可见回答作者"), viewModel.displayItems.map { it.authorName })
+        assertEquals(listOf("这条回答应展示"), viewModel.displayItems.map { it.summary })
     }
 
     private fun setScreen(): RecordingNavigator = composeRule.setScreenContent {
         QuestionScreen(
-            question = Question(questionId = 123456789L, title = "ç¦»çº¿é®é¢æ é¢"),
+            question = Question(questionId = 123456789L, title = "离线问题标题"),
         )
     }
 
@@ -248,7 +248,7 @@ class QuestionScreenInstrumentedTest {
 
     private fun mockQuestionDetail(
         questionId: Long = 123456789L,
-        detail: String = "<p>ç¦»çº¿é®é¢è¯¦æç¨äº QuestionScreen instrumented testã</p>",
+        detail: String = "<p>离线问题详情用于 QuestionScreen instrumented test。</p>",
     ) {
         ZhihuMockApi.mockJsonPrefix(
             method = HttpMethod.Get,
@@ -305,7 +305,7 @@ class QuestionScreenInstrumentedTest {
     ): DataHolder.Question = DataHolder.Question(
         type = "question",
         id = questionId,
-        title = "ç¦»çº¿é®é¢æ é¢",
+        title = "离线问题标题",
         questionType = "normal",
         created = 1_713_456_789L,
         updatedTime = 1_713_456_999L,
@@ -320,11 +320,11 @@ class QuestionScreenInstrumentedTest {
         author = DataHolder.Author(
             avatarUrl = "",
             gender = 0,
-            headline = "ç¦»çº¿æé®èç®ä»",
+            headline = "离线提问者简介",
             id = "question-author-id",
             isAdvertiser = false,
             isOrg = false,
-            name = "ç¦»çº¿æé®è",
+            name = "离线提问者",
             type = "people",
             url = "https://www.zhihu.com/people/question-author-token",
             urlToken = "question-author-token",
@@ -336,15 +336,15 @@ class QuestionScreenInstrumentedTest {
     private fun seededItems(count: Int): List<FeedDisplayItem> = List(count) { index ->
         val id = index + 1L
         FeedDisplayItem(
-            title = "ç¦»çº¿åç­æ¡ç® $id",
-            summary = "è¿æ¯ç¬¬ $id æ¡ç¦»çº¿åç­æè¦ã",
-            details = "ç¦»çº¿ä½è $id Â· èµå ${(id * 3)}",
+            title = "离线回答条目 $id",
+            summary = "这是第 $id 条离线回答摘要。",
+            details = "离线作者 $id · 赞同 ${(id * 3)}",
             feed = null,
             navDestinationJson = Article(
                 type = ArticleType.Answer,
                 id = 7000L + id,
             ).toFeedDisplayItemNavDestinationJson(),
-            authorName = "ç¦»çº¿ä½è $id",
+            authorName = "离线作者 $id",
         )
     }
 
@@ -372,14 +372,14 @@ class QuestionScreenInstrumentedTest {
                 userType = "people",
                 urlToken = "$authorId-token",
                 name = authorName,
-                headline = "$authorName çç¦»çº¿ç­¾å",
+                headline = "$authorName 的离线签名",
                 avatarUrl = "https://example.invalid/avatar/$authorId.png",
             ),
             voteupCount = 10,
             commentCount = 1,
             question = Feed.QuestionTarget(
                 id = 123456789L,
-                _title = "ç¦»çº¿é®é¢æ é¢",
+                _title = "离线问题标题",
                 url = "https://www.zhihu.com/question/123456789",
                 type = "question",
             ),

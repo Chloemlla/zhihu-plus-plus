@@ -88,34 +88,34 @@ class NotificationScreenInstrumentedTest {
         val notifications = listOf(
             notificationFixture(
                 id = "comment-content",
-                title = "å«äººè¯è®ºæçåå®¹",
-                subTitle = "è¯è®ºäºä½ çåç­",
+                title = "别人评论我的内容",
+                subTitle = "评论了你的回答",
                 targetLink = "zhihu://comment/list/answer/2?anchor_comment_id=3&is_child=false",
             ),
             notificationFixture(
                 id = "reply-comment",
-                title = "å«äººåå¤æçè¯è®º",
-                subTitle = "åå¤äºæ³æ³ä¸ä½ çè¯è®º",
+                title = "别人回复我的评论",
+                subTitle = "回复了想法下你的评论",
                 targetLink = "zhihu://comment/list/pin/4?anchor_comment_id=5&is_child=true",
             ),
             notificationFixture(
                 id = "like-root-comment",
-                title = "å«äººç¹èµæçæ ¹è¯è®º",
-                subTitle = "åæ¬¢äºä½ çè¯è®º",
+                title = "别人点赞我的根评论",
+                subTitle = "喜欢了你的评论",
                 targetLink = "zhihu://comment/list/article/6?anchor_comment_id=7&is_child=false",
             ),
             notificationFixture(
                 id = "like-child-comment",
-                title = "å«äººç¹èµæçæ¥¼ä¸­æ¥¼è¯è®º",
-                subTitle = "åæ¬¢äºä½ çè¯è®º",
+                title = "别人点赞我的楼中楼评论",
+                subTitle = "喜欢了你的评论",
                 targetLink = "zhihu://comment/list/pin/8?anchor_comment_id=9&is_child=false",
             ),
         )
         val scrollGuardNotifications = List(8) { index ->
             notificationFixture(
                 id = "scroll-guard-$index",
-                title = "å ä½éç¥ $index",
-                subTitle = "æµè¯å ä½",
+                title = "占位通知 $index",
+                subTitle = "测试占位",
             )
         }
         val recordingNavigator = setNotificationScreenContent(notifications + scrollGuardNotifications)
@@ -154,7 +154,7 @@ class NotificationScreenInstrumentedTest {
      */
     @Test
     fun realAccountCommentLinkSnapshot_all212OccurrencesResolveToTheirAnchors() {
-        // 2026-07-30 ä»å½åè´¦å· comment/like éç¥ååä¸¤é¡µåï¼ä¿çç»æä¸æ°éï¼ID å¨é¨æ¿æ¢ä¸ºæµè¯å¼ã
+        // 2026-07-30 从当前账号 comment/like 通知各取两页后，保留结构与数量，ID 全部替换为测试值。
         val fixtures = buildList {
             val groups = listOf(
                 ObservedCommentLinkGroup("pin", occurrences = 163, uniqueLinks = 163),
@@ -162,7 +162,7 @@ class NotificationScreenInstrumentedTest {
                 ObservedCommentLinkGroup("article", occurrences = 4, uniqueLinks = 4),
                 ObservedCommentLinkGroup("pin", occurrences = 1, uniqueLinks = 1, isChild = true),
                 ObservedCommentLinkGroup("question", occurrences = 1, uniqueLinks = 1),
-                // like ååºæ 20 æ¬¡è·³è½¬ï¼èåå° 7 æ¡å¯ä¸é¾æ¥ï¼3 æ¡æ ¹è¯è®ºã4 æ¡æ¥¼ä¸­æ¥¼è¯è®ºã
+                // like 分区有 20 次跳转，聚合到 7 条唯一链接：3 条根评论、4 条楼中楼评论。
                 ObservedCommentLinkGroup("answer", occurrences = 5, uniqueLinks = 3),
                 ObservedCommentLinkGroup("article", occurrences = 1, uniqueLinks = 1),
                 ObservedCommentLinkGroup("pin", occurrences = 14, uniqueLinks = 3),
@@ -196,7 +196,7 @@ class NotificationScreenInstrumentedTest {
         assertEquals(199, fixtures.map { it.url }.distinct().size)
         fixtures.forEach { fixture ->
             val holder = resolveContent(fixture.url) as? CommentHolder
-                ?: throw AssertionError("æ æ³è§£æçå®è¯è®ºè·³è½¬ç»æï¼${fixture.url}")
+                ?: throw AssertionError("无法解析真实评论跳转结构：${fixture.url}")
             assertEquals(fixture.anchorId, holder.commentId)
             when (val destination = holder.article) {
                 is Article -> {
@@ -214,7 +214,7 @@ class NotificationScreenInstrumentedTest {
                     assertEquals(fixture.contentId, destination.questionId)
                 }
 
-                else -> throw AssertionError("æ æ³è§£æçå®è¯è®ºè·³è½¬ç»æï¼${fixture.url}")
+                else -> throw AssertionError("无法解析真实评论跳转结构：${fixture.url}")
             }
         }
     }
@@ -231,8 +231,8 @@ class NotificationScreenInstrumentedTest {
 
     private fun notificationFixture(
         id: String = "local-notification",
-        title: String = "æµè¯ç¨æ· åå¤äºåç­ä¸ä½ çè¯è®º",
-        subTitle: String = "è¯è®ºååå¤",
+        title: String = "测试用户 回复了回答下你的评论",
+        subTitle: String = "评论和回复",
         targetLink: String = "zhihu://comment/list/answer/2?anchor_comment_id=3&is_child=false",
     ) = MobileNotificationTimelineItem(
         id = id,
