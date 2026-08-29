@@ -32,6 +32,47 @@ import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import java.util.concurrent.CopyOnWriteArrayList
 
+/** CMFA 授予的 `partnerStatus` 读取层级，对应 provider 的 `accessTier` 字段。 */
+internal enum class ClashAccess { Unavailable, Denied, Basic, Full }
+
+/**
+ * 读出 CMFA 授予的层级。apiVersion 3 起 `accessTier` 明确回传 `denied`/`basic`/`full`；
+ * 更早的 CMFA 不带该字段，但那时能读到内容就等于拿到了全部字段，所以按 [ClashAccess.Full] 处理。
+ */
+internal fun parseClashAccess(values: Map<String, Any?>): ClashAccess =
+    when (values["accessTier"] as? String) {
+        "denied" -> ClashAccess.Denied
+        "basic" -> ClashAccess.Basic
+        "full" -> ClashAccess.Full
+        else -> if (values.isEmpty()) ClashAccess.Unavailable else ClashAccess.Full
+    }
+
+/**
+ * 把 CMFA 的机器可读 `deniedReason` 翻成用户能照着做的一句中文。
+ */
+internal fun describeDeniedReason(reason: String?): String = when (reason) {
+    "pending_user_approval" -> "等待在 Clash 中确认配对：打开 Clash 主页或点击配对通知即可授权"
+    "denied_by_user" -> "已在 Clash 中拒绝授权，可在 Clash 主页「伙伴应用」里撤销"
+    "signer_unverified" -> "Clash 未登记 Zhihu++ 的签名证书，只开放基础状态；在「伙伴应用」里允许即可读取完整状态"
+    "not_partner" -> "Clash 没把 Zhihu++ 认成伙伴应用，请更新 Clash 到支持伙伴配对的版本"
+    "no_signature" -> "Clash 读不到 Zhihu++ 的签名信息，无法完成配对"
+    null -> "Clash 未说明原因"
+    else -> "Clash 返回原因：$reason"
+}
+
+/**
+ * 一次 `partnerStatus` 查询的结果：层级、拒绝原因，以及真正读到的字段。
+ * [values] 只在层级可读（Basic/Full）时非空——被拒时返回的 bundle 也非空，但只带
+ * apiVersion/accessTier/deniedReason，绝不能把它当成一份全 false 的状态。
+ */
+private data class PartnerRead(
+    val access: ClashAccess,
+    val deniedReason: String?,
+    val values: Map<String, Any?>?,
+)
+
+private val UNAVAILABLE_PARTNER = PartnerRead(ClashAccess.Unavailable, null, null)
+
 /**
  * Zero-config ClashMeta VPN partner adapt for Zhihu++.
  * VPN TUN routes traffic system-wide; this module detects status and
@@ -90,6 +131,11 @@ object ClashPartnerCompat {
          * as "Clash routing".
          */
         val partnerStatusAvailable: Boolean = false,
+        /**
+         * CMFA 授予的读取层级；被拒时 [partnerDeniedReason] 给出可操作的解决文案。
+         */
+        val partnerAccess: ClashAccess = ClashAccess.Unavailable,
+        val partnerDeniedReason: String? = null,
     ) {
         val isClashVpnRouting: Boolean
             get() =
@@ -114,6 +160,8 @@ object ClashPartnerCompat {
         return when {
             !enabled -> "已关闭自动适配"
             !s.clashInstalled -> "未检测到 Clash Meta"
+            s.partnerAccess == ClashAccess.Denied ->
+                "读不到 Clash 状态 · ${describeDeniedReason(s.partnerDeniedReason)}"
             s.isClashVpnRouting -> {
                 val profile = s.profileName
                 if (!profile.isNullOrBlank()) {
@@ -172,11 +220,15 @@ object ClashPartnerCompat {
     private fun buildStatus(context: Context): Status {
         val clashInstalled = isClashInstalled(context)
         val vpnActive = isVpnActive(context)
-        val partner = queryPartnerStatus(context)
-        val partnerStatusAvailable = partner != null
+        val read = queryPartnerStatus(context)
+        val status = read.values
+        // Provider 状态可信（Basic/Full）时以它为准。被拒时返回的 bundle 也非空但没有任何
+        // 状态字段，必须退回「Clash 已装且 VPN 活跃」的启发式——否则会把一次拒绝误判成
+        // 「Clash 没在路由」，在一条活着的隧道上再叠一层手动代理。
         val clashVpnRunning =
-            if (partnerStatusAvailable) {
-                partner?.get("vpnRunning") as? Boolean ?: false
+            if (status != null) {
+                status["vpnRunning"] as? Boolean == true &&
+                    status["partnerAppAutoAdapt"] as? Boolean == true
             } else {
                 clashInstalled && vpnActive
             }
@@ -184,12 +236,14 @@ object ClashPartnerCompat {
             clashInstalled = clashInstalled,
             vpnActive = vpnActive,
             clashVpnRunning = clashVpnRunning,
-            partnerAppAutoAdapt = (partner?.get("partnerAppAutoAdapt") as? Boolean)
-                ?: (partner?.get("piliPlusAutoAdapt") as? Boolean)
+            partnerAppAutoAdapt = (status?.get("partnerAppAutoAdapt") as? Boolean)
+                ?: (status?.get("piliPlusAutoAdapt") as? Boolean)
                 ?: true,
-            profileName = partner?.get("name") as? String,
-            clashPackage = partner?.get("package") as? String,
-            partnerStatusAvailable = partnerStatusAvailable,
+            profileName = status?.get("name") as? String,
+            clashPackage = status?.get("package") as? String,
+            partnerStatusAvailable = status != null,
+            partnerAccess = read.access,
+            partnerDeniedReason = read.deniedReason,
         )
     }
 
@@ -258,7 +312,7 @@ object ClashPartnerCompat {
         }
     }
 
-    private fun queryPartnerStatus(context: Context): Map<String, Any?>? {
+    private fun queryPartnerStatus(context: Context): PartnerRead {
         val resolver = context.contentResolver
         for (pkg in clashPackages) {
             val uri =
@@ -270,7 +324,9 @@ object ClashPartnerCompat {
             val bundle = runCatching {
                 resolver.call(uri, METHOD_PARTNER_STATUS, null, null)
             }.getOrNull() ?: continue
-            return mapOf(
+            val values = mapOf(
+                "accessTier" to bundle.getString("accessTier"),
+                "deniedReason" to bundle.getString("deniedReason"),
                 "running" to bundle.getBoolean("running", false),
                 "vpnRunning" to bundle.getBoolean("vpnRunning", false),
                 "partnerAppAutoAdapt" to bundle.getBoolean(
@@ -281,8 +337,14 @@ object ClashPartnerCompat {
                 "name" to bundle.getString("name"),
                 "package" to (bundle.getString("package") ?: pkg),
             )
+            val access = parseClashAccess(values)
+            return PartnerRead(
+                access = access,
+                deniedReason = values["deniedReason"] as? String,
+                values = values.takeIf { access != ClashAccess.Denied },
+            )
         }
-        return null
+        return UNAVAILABLE_PARTNER
     }
 
     /**
