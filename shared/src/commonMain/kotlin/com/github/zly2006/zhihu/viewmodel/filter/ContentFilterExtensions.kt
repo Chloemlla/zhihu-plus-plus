@@ -29,6 +29,9 @@ import com.github.zly2006.zhihu.shared.data.questionAuthor
 import com.github.zly2006.zhihu.shared.data.target
 import com.github.zly2006.zhihu.shared.filter.ContentOpenEventSupport
 import com.github.zly2006.zhihu.shared.platform.SettingsStore
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 
 class ForegroundReadFilterPipeline(
@@ -235,17 +238,21 @@ class FeedDisplayFilterPipeline(
             emptyList<FeedDisplayItem>() to items
         }
 
-        val itemToFilterableMap = mutableMapOf<FeedDisplayItem, FilterableContent>()
+        val itemToFilterableMap = coroutineScope {
+            otherItems
+                .map { item ->
+                    async {
+                        val identity = item.resolveContentIdentity()
+                        val rawContent = resolveRawContent(item)
 
-        otherItems.forEach { item ->
-            val identity = item.resolveContentIdentity()
-            val rawContent = resolveRawContent(item)
+                        if (rawContent is DataHolder.DummyContent) {
+                            onDetailFetchFailed(item)
+                        }
 
-            if (rawContent is DataHolder.DummyContent) {
-                onDetailFetchFailed(item)
-            }
-
-            itemToFilterableMap[item] = item.toFilterableContent(identity, rawContent)
+                        item to item.toFilterableContent(identity, rawContent)
+                    }
+                }.awaitAll()
+                .toMap()
         }
 
         val filterableContents = itemToFilterableMap.values.toList()
