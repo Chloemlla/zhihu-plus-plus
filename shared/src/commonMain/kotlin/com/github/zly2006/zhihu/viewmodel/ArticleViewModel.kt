@@ -26,16 +26,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.zly2006.zhihu.aigc.AigcVoteFlagResponse
-import com.github.zly2006.zhihu.aigc.AigcVoteFlagStatusResponse
-import com.github.zly2006.zhihu.aigc.AigcVoteFlagSubmission
-import com.github.zly2006.zhihu.aigc.AigcVoteNamedVoter
-import com.github.zly2006.zhihu.aigc.AigcVoteReadEvent
-import com.github.zly2006.zhihu.aigc.AigcVoteReadEvidence
-import com.github.zly2006.zhihu.comment.decodeZhihuCommentData
+import com.github.zly2006.zhihu.data.AigcVoteFlagRequest
+import com.github.zly2006.zhihu.data.AigcVoteFlagResponse
+import com.github.zly2006.zhihu.data.AigcVoteFlagStatusResponse
+import com.github.zly2006.zhihu.data.AigcVoteFlagSubmission
+import com.github.zly2006.zhihu.data.AigcVoteNamedVoter
+import com.github.zly2006.zhihu.data.AigcVoteReadEvent
+import com.github.zly2006.zhihu.data.AigcVoteReadEventsRequest
+import com.github.zly2006.zhihu.data.AigcVoteReadEventsResponse
+import com.github.zly2006.zhihu.data.AigcVoteReadEvidence
+import com.github.zly2006.zhihu.data.Collection
+import com.github.zly2006.zhihu.data.CollectionResponse
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.OfficialBadge
+import com.github.zly2006.zhihu.data.VoteUpState
 import com.github.zly2006.zhihu.data.ZhihuJson
+import com.github.zly2006.zhihu.data.decodeZhihuCommentData
 import com.github.zly2006.zhihu.data.officialBadge
 import com.github.zly2006.zhihu.markdown.htmlToMdAst
 import com.github.zly2006.zhihu.markdown.toMarkdown
@@ -45,9 +51,7 @@ import com.github.zly2006.zhihu.navigation.CollectionAnswerNavigator
 import com.github.zly2006.zhihu.navigation.PaginationInfoNavigator
 import com.github.zly2006.zhihu.navigation.QuestionAnswerNavigator
 import com.github.zly2006.zhihu.platform.UserMessageSink
-import com.github.zly2006.zhihu.ui.Collection
-import com.github.zly2006.zhihu.ui.CollectionResponse
-import com.github.zly2006.zhihu.ui.VoteUpState
+import com.github.zly2006.zhihu.platform.isAigcVoteSupported
 import com.github.zly2006.zhihu.util.ArticleExportComment
 import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.util.ZhidaSummarySsePayload
@@ -68,6 +72,8 @@ import io.ktor.client.call.body
 import io.ktor.client.request.accept
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.client.request.parameter
+import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsChannel
@@ -98,7 +104,9 @@ import kotlin.time.Clock
 class ArticleViewModel(
     private val article: Article,
     val httpClient: HttpClient?,
-    private val userMessages: UserMessageSink = UserMessageSink(showShortMessage = {}),
+    private val userMessages: UserMessageSink = object : UserMessageSink {
+        override fun showShortMessage(message: String) = Unit
+    },
     registerOnPause: (((() -> Unit) -> Unit))? = null,
 ) : ViewModel() {
     var permissionRequestCount by mutableIntStateOf(0)
@@ -126,6 +134,8 @@ class ArticleViewModel(
         private set
     val voters = mutableStateListOf<DataHolder.Author>()
     var questionId by mutableLongStateOf(0L)
+    var answerNextIds by mutableStateOf<List<Long>>(emptyList())
+        private set
     var collections = mutableStateListOf<Collection>()
     var updatedAt by mutableLongStateOf(0L)
     var createdAt by mutableLongStateOf(0L)
@@ -248,7 +258,7 @@ class ArticleViewModel(
             withContext(Dispatchers.Default) {
                 try {
                     if (article.type == ArticleType.Answer) {
-                        val sharedData = environment.articleAnswerSwitchState()
+                        val sharedData = sharedArticleAnswerSwitchState
                         val answer = environment.fetchContentDetail(article) as? DataHolder.Answer
                         if (answer != null) {
                             exportSourceContent = answer
@@ -271,12 +281,8 @@ class ArticleViewModel(
                             votersTotal = answer.voteupCount
                             commentCount = answer.commentCount
                             questionId = answer.question.id
-                            voteUpState = when (answer.reaction?.relation?.vote) {
-                                "UP" -> VoteUpState.Up
-                                "DOWN" -> VoteUpState.Down
-                                "Neutral" -> VoteUpState.Neutral
-                                else -> VoteUpState.Neutral
-                            }
+                            answerNextIds = answer.paginationInfo?.nextAnswerIds.orEmpty()
+                            voteUpState = VoteUpState.from(answer.reaction?.relation?.vote)
                             updatedAt = answer.updatedTime
                             createdAt = answer.createdTime
                             ipInfo = answer.ipInfo
@@ -295,31 +301,37 @@ class ArticleViewModel(
                                 ),
                             )
                             environment.recordOpenEvent(article, answer.question.id)
-                            // 设置问题回答导航器（如果当前不是收藏夹导航器）
-                            if (sharedData?.navigator !is CollectionAnswerNavigator) {
-                                val existingNav = sharedData?.navigator
-                                val isSameQuestion = when (existingNav) {
-                                    is QuestionAnswerNavigator -> existingNav.questionId == questionId
-                                    is PaginationInfoNavigator -> existingNav.questionId == questionId
-                                    else -> false
+                            withContext(Dispatchers.Main.immediate) {
+                                // 设置问题回答导航器（如果当前不是收藏夹导航器）
+                                if (sharedData.navigator !is CollectionAnswerNavigator) {
+                                    val existingNav = sharedData.navigator
+                                    val isSameQuestion = when (existingNav) {
+                                        is QuestionAnswerNavigator -> existingNav.questionId == questionId
+                                        is PaginationInfoNavigator -> existingNav.questionId == questionId
+                                        else -> false
+                                    }
+                                    if (!isSameQuestion) {
+                                        sharedData.navigator = QuestionAnswerNavigator(
+                                            questionId = questionId,
+                                            environment = environment,
+                                        )
+                                    }
                                 }
-                                if (!isSameQuestion) {
-                                    sharedData?.navigator = QuestionAnswerNavigator(
-                                        questionId = questionId,
-                                        environment = environment,
-                                    )
-                                }
+                                sharedData.navigator?.pushAnswer(
+                                    toCachedContent(sourceLabel = sharedData.navigator?.sourceName ?: "此问题"),
+                                )
                             }
-                            sharedData?.navigator?.pushAnswer(toCachedContent(sourceLabel = sharedData.navigator?.sourceName ?: "此问题"))
                             loadAnswerRelationshipEndorsement(environment)
                             loadMoreVoters(environment, reset = true)
 
                             // 仅在无前向历史时预取下一个回答
-                            sharedData?.navigator?.let { nav ->
-                                if (nav.currentAnswerIndex >= nav.answerHistory.size - 1) {
-                                    nav.prefetchNext(article.id)
+                            withContext(Dispatchers.Main.immediate) {
+                                sharedData.navigator?.let { nav ->
+                                    if (nav.currentAnswerIndex >= nav.answerHistory.size - 1) {
+                                        nav.prefetchNext(article.id)
+                                    }
+                                    nav.prefetchPrevious(article.id)
                                 }
-                                nav.prefetchPrevious(article.id)
                             }
                         } else {
                             content = "<h1>你似乎来到了没有知识存在的荒原</h1>"
@@ -348,12 +360,7 @@ class ArticleViewModel(
                             authorBio = article.author.headline
                             authorAvatarSrc = article.author.avatarUrl
                             authorBadge = article.author.badgeV2.officialBadge()
-                            voteUpState = when (article.reaction?.relation?.vote) {
-                                "UP" -> VoteUpState.Up
-                                "DOWN" -> VoteUpState.Down
-                                "Neutral" -> VoteUpState.Neutral
-                                else -> VoteUpState.Neutral
-                            }
+                            voteUpState = VoteUpState.from(article.reaction?.relation?.vote)
                             updatedAt = article.updated
                             createdAt = article.created
                             ipInfo = article.ipInfo
@@ -649,23 +656,36 @@ class ArticleViewModel(
     fun isAigcFlagEvidenceReady(): Boolean = currentAigcReadEvidence().isEligibleForCredit()
 
     fun loadAigcFlagStatus(environment: AigcVoteEnvironment) {
-        val client = environment.aigcVoteClient()
-        aigcVoteAvailable = client != null
+        aigcVoteAvailable = isAigcVoteSupported && environment.isAigcVoteEnabled()
         val voter = environment.aigcVoteVoter()
         aigcVoterName = voter?.name.orEmpty()
-        if (client == null) return
+        if (!aigcVoteAvailable) return
+        val client = environment.aigcVoteHttpClient()
 
         viewModelScope.launch {
             aigcVoteLoading = true
             aigcVoteError = null
             try {
-                applyAigcStatus(
-                    client.getFlagStatus(
-                        contentType = aigcContentType(),
-                        contentId = article.id.toString(),
-                        voter = voter,
-                    ),
-                )
+                val response = client
+                    .get(
+                        "${environment.aigcVoteBaseUrl().trimEnd('/')}/v1/contents/" +
+                            "${aigcContentType()}/${article.id}/aigc-flag",
+                    ) {
+                        parameter("client_id", environment.aigcVoteClientId())
+                        voter?.let {
+                            parameter("voter_id", it.id)
+                            parameter("voter_name", it.name)
+                            it.urlToken?.takeIf(String::isNotBlank)?.let { token -> parameter("voter_url_token", token) }
+                        }
+                    }.body<AigcVoteFlagStatusResponse>()
+                aigcFlagged = response.myFlagged
+                aigcVoteCredit = response.credit
+                aigcVoteProgress = response.progress
+                aigcVoteCap = response.cap
+                aigcCreditBypassAvailable = response.creditBypassAvailable
+                aigcEffectiveFlagCount = response.effectiveFlagCount
+                aigcNamedVoters = response.voters
+                zhihuaiAigcSupportVoterCount = response.externalSource?.voterCount ?: 0
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -678,9 +698,9 @@ class ArticleViewModel(
     }
 
     fun syncAigcReadEventIfEligible(environment: AigcVoteEnvironment) {
-        val client = environment.aigcVoteClient()
-        aigcVoteAvailable = client != null
-        if (client == null || aigcReadSyncStarted || content.isBlank()) return
+        aigcVoteAvailable = isAigcVoteSupported && environment.isAigcVoteEnabled()
+        if (!aigcVoteAvailable || aigcReadSyncStarted || content.isBlank()) return
+        val client = environment.aigcVoteHttpClient()
 
         val evidence = currentAigcReadEvidence()
         val contentUpdatedAt = currentContentUpdatedAt()
@@ -689,17 +709,20 @@ class ArticleViewModel(
 
         viewModelScope.launch {
             try {
-                val response = client.syncReadEvent(
-                    AigcVoteReadEvent(
-                        contentType = aigcContentType(),
-                        contentId = article.id.toString(),
-                        title = title,
-                        authorHash = currentAuthorHash(),
-                        contentHtml = content,
-                        contentUpdatedAt = contentUpdatedAt,
-                        evidence = evidence,
-                    ),
+                val event = AigcVoteReadEvent(
+                    contentType = aigcContentType(),
+                    contentId = article.id.toString(),
+                    title = title,
+                    authorHash = currentAuthorHash(),
+                    contentHtml = content,
+                    contentUpdatedAt = contentUpdatedAt,
+                    evidence = evidence,
                 )
+                val response = client
+                    .post("${environment.aigcVoteBaseUrl().trimEnd('/')}/v1/read-events:batch") {
+                        contentType(ContentType.Application.Json)
+                        setBody(AigcVoteReadEventsRequest(environment.aigcVoteClientId(), listOf(event.toRequestEvent())))
+                    }.body<AigcVoteReadEventsResponse>()
                 aigcVoteCredit = response.credit
                 aigcVoteProgress = response.progress
                 aigcVoteCap = response.cap
@@ -715,13 +738,13 @@ class ArticleViewModel(
     }
 
     fun submitAigcFlag(environment: AigcVoteEnvironment) {
-        val client = environment.aigcVoteClient()
-        aigcVoteAvailable = client != null
-        if (client == null) {
+        aigcVoteAvailable = isAigcVoteSupported && environment.isAigcVoteEnabled()
+        if (!aigcVoteAvailable) {
             aigcVoteError = "未配置 AIGC 投票服务"
             userMessages.showShortMessage(aigcVoteError!!)
             return
         }
+        val client = environment.aigcVoteHttpClient()
         if (content.isBlank()) {
             aigcVoteError = "正文尚未加载完成"
             userMessages.showShortMessage(aigcVoteError!!)
@@ -749,20 +772,41 @@ class ArticleViewModel(
             aigcVoteLoading = true
             aigcVoteError = null
             try {
-                applyAigcFlagResponse(
-                    client.submitFlag(
-                        AigcVoteFlagSubmission(
-                            contentType = aigcContentType(),
-                            contentId = article.id.toString(),
-                            voter = voter,
-                            title = title,
-                            authorHash = currentAuthorHash(),
-                            contentHtml = content,
-                            contentUpdatedAt = currentContentUpdatedAt(),
-                            evidence = currentAigcReadEvidence(),
-                        ),
-                    ),
+                val submission = AigcVoteFlagSubmission(
+                    contentType = aigcContentType(),
+                    contentId = article.id.toString(),
+                    voter = voter,
+                    title = title,
+                    authorHash = currentAuthorHash(),
+                    contentHtml = content,
+                    contentUpdatedAt = currentContentUpdatedAt(),
+                    evidence = currentAigcReadEvidence(),
                 )
+                val response = client
+                    .post(
+                        "${environment.aigcVoteBaseUrl().trimEnd('/')}/v1/contents/" +
+                            "${submission.contentType}/${submission.contentId}/aigc-flag",
+                    ) {
+                        contentType(ContentType.Application.Json)
+                        setBody(
+                            AigcVoteFlagRequest(
+                                clientId = environment.aigcVoteClientId(),
+                                voter = submission.voter,
+                                title = submission.title,
+                                authorHash = submission.authorHash,
+                                contentHtml = submission.contentHtml,
+                                contentUpdatedAt = submission.contentUpdatedAt,
+                                evidence = submission.evidence.toFlagEvidence(),
+                            ),
+                        )
+                    }.body<AigcVoteFlagResponse>()
+                aigcFlagged = response.myFlagged
+                aigcVoteCredit = response.credit
+                aigcCreditBypassAvailable = response.creditBypassAvailable
+                aigcEffectiveFlagCount = response.effectiveFlagCount
+                aigcCurrentVersionFlagCount = response.currentVersionFlagCount
+                aigcNamedVoters = response.voters
+                zhihuaiAigcSupportVoterCount = response.externalSource?.voterCount ?: 0
                 userMessages.showShortMessage("已标记疑似 AIGC")
             } catch (e: CancellationException) {
                 throw e
@@ -774,27 +818,6 @@ class ArticleViewModel(
                 aigcVoteLoading = false
             }
         }
-    }
-
-    private fun applyAigcStatus(response: AigcVoteFlagStatusResponse) {
-        aigcFlagged = response.myFlagged
-        aigcVoteCredit = response.credit
-        aigcVoteProgress = response.progress
-        aigcVoteCap = response.cap
-        aigcCreditBypassAvailable = response.creditBypassAvailable
-        aigcEffectiveFlagCount = response.effectiveFlagCount
-        aigcNamedVoters = response.voters
-        zhihuaiAigcSupportVoterCount = response.externalSource?.voterCount ?: 0
-    }
-
-    private fun applyAigcFlagResponse(response: AigcVoteFlagResponse) {
-        aigcFlagged = response.myFlagged
-        aigcVoteCredit = response.credit
-        aigcCreditBypassAvailable = response.creditBypassAvailable
-        aigcEffectiveFlagCount = response.effectiveFlagCount
-        aigcCurrentVersionFlagCount = response.currentVersionFlagCount
-        aigcNamedVoters = response.voters
-        zhihuaiAigcSupportVoterCount = response.externalSource?.voterCount ?: 0
     }
 
     private fun currentAigcReadEvidence(): AigcVoteReadEvidence {
@@ -980,16 +1003,7 @@ class ArticleViewModel(
 
         var preparedWebView: PreparedArticleExportContent? = null
         var bitmap: Any? = null
-        val renderer = environment.articleImageExportRenderer { fileName ->
-            try {
-                environment.loadExportAssetText(fileName)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e("ArticleViewModel", "Failed to load export asset: $fileName", e)
-                ""
-            }
-        }!!
+        val renderer = environment.articleImageExportRenderer()
         try {
             preparedWebView = renderer.prepareExportWebView(
                 htmlContent = createHtmlContent(

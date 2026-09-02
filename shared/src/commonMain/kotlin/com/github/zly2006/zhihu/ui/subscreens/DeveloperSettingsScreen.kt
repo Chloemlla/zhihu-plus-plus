@@ -52,7 +52,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -62,16 +61,19 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.github.zly2006.zhihu.account.rememberZhihuAccountStore
 import com.github.zly2006.zhihu.data.ZHIHU_ME_URL
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.SentenceSimilarityTest
+import com.github.zly2006.zhihu.platform.isSentenceSimilaritySupported
+import com.github.zly2006.zhihu.platform.rememberIsLiteVariant
 import com.github.zly2006.zhihu.platform.rememberPlainTextClipboard
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.ui.TtsState
 import com.github.zly2006.zhihu.ui.components.SettingItemOverall
-import kotlinx.coroutines.delay
+import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
 import kotlinx.coroutines.launch
 
 const val DEVELOPER_SETTINGS_BACK_BUTTON_TAG = "developerSettings/backButton"
@@ -89,7 +91,9 @@ const val DEVELOPER_SETTINGS_COLOR_SCHEME_TAG = "developerSettings/colorScheme"
 @Composable
 fun DeveloperSettingsScreen() {
     val navigator = LocalNavigator.current
-    val runtime = rememberDeveloperSettingsRuntime()
+    val environment = rememberPaginationEnvironment(allowGuestAccess = false)
+    val accountStore = rememberZhihuAccountStore()
+    val runtimeInfo = rememberDeveloperInfo()
     val copyPlainText = rememberPlainTextClipboard()
     val userMessages = rememberUserMessageSink()
     val coroutineScope = rememberCoroutineScope()
@@ -97,16 +101,6 @@ fun DeveloperSettingsScreen() {
     var developerModeEnabled by remember {
         mutableStateOf(settings.getBoolean("developer", false))
     }
-    val continuousUsageDurationMs by produceState(
-        initialValue = runtime.runtimeInfo().continuousUsageDurationMs,
-        key1 = runtime,
-    ) {
-        while (true) {
-            value = runtime.runtimeInfo().continuousUsageDurationMs
-            delay(1_000L)
-        }
-    }
-
     var showCookieDialog by remember { mutableStateOf(false) }
     var showSignedRequestDialog by remember { mutableStateOf(false) }
 
@@ -159,9 +153,9 @@ fun DeveloperSettingsScreen() {
             )
             SelectionContainer {
                 Column {
-                    Text(runtime.networkStatus())
-                    runtime.powerSaveModeText()?.let { Text(it) }
-                    Text("连续使用时长：${formatContinuousUsageDuration(continuousUsageDurationMs)}")
+                    Text(runtimeInfo.networkStatus)
+                    runtimeInfo.powerSaveModeText?.let { Text(it) }
+                    Text("连续使用时长：${formatContinuousUsageDuration(runtimeInfo.continuousUsageDurationMs)}")
 
                     Spacer(Modifier.height(16.dp))
                 }
@@ -169,7 +163,7 @@ fun DeveloperSettingsScreen() {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = {
                     coroutineScope.launch {
-                        if (runtime.verifyLogin(runtime.cookies())) {
+                        if (accountStore.client.refreshAndSaveProfile() != null) {
                             userMessages.showShortMessage("登录成功")
                         } else {
                             userMessages.showShortMessage("登录失败")
@@ -179,7 +173,7 @@ fun DeveloperSettingsScreen() {
 
                 Button(onClick = {
                     coroutineScope.launch {
-                        runtime.refreshToken()
+                        environment.refreshToken()
                         userMessages.showShortMessage("刷新成功")
                     }
                 }) { Text("刷新Token") }
@@ -188,12 +182,14 @@ fun DeveloperSettingsScreen() {
 
                 Button(onClick = { showSignedRequestDialog = true }) { Text("签名请求") }
 
-                Button(
-                    modifier = Modifier.testTag(DEVELOPER_SETTINGS_SENTENCE_SIMILARITY_TAG),
-                    onClick = {
-                        navigator.onNavigate(SentenceSimilarityTest)
-                    },
-                ) { Text("句子相似度") }
+                if (isSentenceSimilaritySupported && !rememberIsLiteVariant()) {
+                    Button(
+                        modifier = Modifier.testTag(DEVELOPER_SETTINGS_SENTENCE_SIMILARITY_TAG),
+                        onClick = {
+                            navigator.onNavigate(SentenceSimilarityTest)
+                        },
+                    ) { Text("句子相似度") }
+                }
 
                 Button(
                     modifier = Modifier.testTag(DEVELOPER_SETTINGS_COLOR_SCHEME_TAG),
@@ -232,7 +228,7 @@ fun DeveloperSettingsScreen() {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            runtime.runtimeInfo().currentTtsEngineLabel,
+                            runtimeInfo.currentTtsEngineLabel,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
@@ -248,17 +244,17 @@ fun DeveloperSettingsScreen() {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            if (runtime.runtimeInfo().ttsState.isSpeaking) {
+                            if (runtimeInfo.ttsState.isSpeaking) {
                                 "正在朗读"
-                            } else if (runtime.runtimeInfo().ttsState != TtsState.Uninitialized) {
+                            } else if (runtimeInfo.ttsState != TtsState.Uninitialized) {
                                 "就绪"
                             } else {
                                 "未就绪"
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = when {
-                                runtime.runtimeInfo().ttsState.isSpeaking -> MaterialTheme.colorScheme.tertiary
-                                runtime.runtimeInfo().ttsState != TtsState.Uninitialized -> MaterialTheme.colorScheme.primary
+                                runtimeInfo.ttsState.isSpeaking -> MaterialTheme.colorScheme.tertiary
+                                runtimeInfo.ttsState != TtsState.Uninitialized -> MaterialTheme.colorScheme.primary
                                 else -> MaterialTheme.colorScheme.error
                             },
                         )
@@ -274,11 +270,11 @@ fun DeveloperSettingsScreen() {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            runtime.runtimeInfo().availableTtsEngineLabels.joinToString(),
+                            runtimeInfo.availableTtsEngineLabels.joinToString(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = when {
-                                runtime.runtimeInfo().ttsState.isSpeaking -> MaterialTheme.colorScheme.tertiary
-                                runtime.runtimeInfo().ttsState != TtsState.Uninitialized -> MaterialTheme.colorScheme.primary
+                                runtimeInfo.ttsState.isSpeaking -> MaterialTheme.colorScheme.tertiary
+                                runtimeInfo.ttsState != TtsState.Uninitialized -> MaterialTheme.colorScheme.primary
                                 else -> MaterialTheme.colorScheme.error
                             },
                         )
@@ -340,12 +336,9 @@ fun DeveloperSettingsScreen() {
                                 }
 
                                 if (cookies.isNotEmpty()) {
-                                    runtime.saveCookies(cookies)
-
-                                    // 验证登录状态
                                     coroutineScope.launch {
                                         try {
-                                            if (runtime.verifyLogin(cookies)) {
+                                            if (accountStore.login(cookies)) {
                                                 userMessages.showShortMessage("Cookie设置成功并验证登录状态")
                                             } else {
                                                 userMessages.showShortMessage("Cookie设置成功，但验证登录失败，请检查Cookie是否有效")
@@ -441,7 +434,7 @@ fun DeveloperSettingsScreen() {
                             isLoading = true
                             coroutineScope.launch {
                                 try {
-                                    val body = runtime.signedGet(urlInput)
+                                    val body = environment.signedGetText(urlInput)
                                     copyPlainText("Signed Request Response", body)
                                     responseText = body
                                     userMessages.showShortMessage("响应已复制到剪贴板")

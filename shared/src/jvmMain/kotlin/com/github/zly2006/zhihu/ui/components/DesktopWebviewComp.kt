@@ -28,7 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.awt.SwingPanel
-import com.github.zly2006.zhihu.login.ZHIHU_DESKTOP_USER_AGENT
+import com.github.zly2006.zhihu.account.ZHIHU_DESKTOP_USER_AGENT
 import javafx.application.Platform
 import javafx.embed.swing.JFXPanel
 import javafx.scene.Scene
@@ -115,7 +115,7 @@ fun DesktopWebviewComp(
 /**
  * 桌面端风控验证 WebView 容器。
  *
- * 对应 Android 端 LoginActivity 中 QrLoginPane 的风险控制内容区域，
+ * 对应共享登录页中的二维码风控内容区域，
  * 负责加载风控验证 URL 并在用户完成验证后回传 cookies。
  */
 @Composable

@@ -26,6 +26,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,7 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.github.zly2006.zhihu.data.fetchHighestQualityZhihuVideoUrl
-import com.github.zly2006.zhihu.desktop.DesktopAccountStore
+import com.github.zly2006.zhihu.desktop.defaultDesktopAccountStore
 import com.github.zly2006.zhihu.desktop.openDesktopExternalUrl
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.Article
@@ -55,7 +56,7 @@ import com.github.zly2006.zhihu.navigation.Pin
 import com.github.zly2006.zhihu.navigation.Question
 import com.github.zly2006.zhihu.navigation.TopLevelDestination
 import com.github.zly2006.zhihu.navigation.Video
-import com.github.zly2006.zhihu.onboarding.AppGateHost
+import com.github.zly2006.zhihu.platform.platformBottomBarItemLimit
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.theme.ThemeManager
@@ -70,8 +71,8 @@ import com.github.zly2006.zhihu.ui.subscreens.normalizeBottomBarSelection
 import com.github.zly2006.zhihu.ui.subscreens.resolveValidStartDestinationKey
 import com.github.zly2006.zhihu.util.signZhihuFetchRequest
 import com.github.zly2006.zhihu.viewmodel.ArticleViewModel
-import com.github.zly2006.zhihu.viewmodel.desktopArticleAnswerSwitchState
 import com.github.zly2006.zhihu.viewmodel.prepareDesktopPendingContentOpen
+import com.github.zly2006.zhihu.viewmodel.sharedArticleAnswerSwitchState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -81,13 +82,14 @@ import kotlinx.coroutines.withContext
  *
  * 这里创建桌面 NavController、账号存储、HTTP 客户端和视频/文章等平台行为，再注入共享 [ZhihuMain]。
  * 设计上尽量复用 common 页面结构，只把浏览器打开、签名请求、回答切换状态和桌面账号读取留在 JVM 侧。
- * [AppGateHost] 与 Android 一致，负责首装开源声明、用户须知与本次更新说明门控。
  */
 @Composable
 fun DesktopZhihuMain() {
     val navController = rememberNavController()
-    val httpClient = rememberZhihuHttpClient()
-    val accountStore = remember { DesktopAccountStore() }
+    val accountStore = defaultDesktopAccountStore
+    val accounts by accountStore.accountsState.collectAsState()
+    val accountSession = accounts.session
+    val httpClient = remember(accountStore, accountSession) { accountStore.client.httpClient() }
     val coroutineScope = rememberCoroutineScope()
     val userMessages = rememberUserMessageSink()
     var mainTabNavigationTarget by remember { mutableStateOf<TopLevelDestination?>(null) }
@@ -146,7 +148,7 @@ fun DesktopZhihuMain() {
                     else -> return
                 }
                 coroutineScope.launch {
-                    val cookies = accountStore.load().cookies
+                    val cookies = accountStore.session.cookies
                     val videoUrl = withContext(Dispatchers.IO) {
                         runCatching {
                             fetchHighestQualityZhihuVideoUrl(
@@ -188,53 +190,51 @@ fun DesktopZhihuMain() {
         }
     }
 
-    AppGateHost {
-        ZhihuMain(
-            navController = navController,
-            mainTabNavigationTarget = mainTabNavigationTarget,
-            navigate = ::navigate,
-            setCurrentMainTabOpenFrom = { currentMainTabOpenFrom = it },
-            consumeMainTabNavigationTarget = { destination ->
-                if (mainTabNavigationTarget == destination) {
-                    mainTabNavigationTarget = null
-                }
-            },
-            preferenceState = rememberDesktopZhihuMainPreferenceState(),
-            isDarkTheme = ThemeManager.isDarkTheme(),
-            articleContent = { article, navEntry ->
-                val articleViewModel: ArticleViewModel = viewModel(navEntry) {
-                    ArticleViewModel(article, httpClient, userMessages)
-                }
-                ArticleScreen(article, articleViewModel)
-            },
-            articleEnterTransition = {
-                when (desktopArticleAnswerSwitchState.answerTransitionDirection) {
-                    ArticleAnswerTransitionDirection.VERTICAL_NEXT ->
-                        slideInVertically(tween(300)) { it } + fadeIn(tween(300))
-                    ArticleAnswerTransitionDirection.VERTICAL_PREVIOUS ->
-                        slideInVertically(tween(300)) { -it } + fadeIn(tween(300))
-                    ArticleAnswerTransitionDirection.HORIZONTAL_NEXT ->
-                        slideInHorizontally(tween(300)) { it } + fadeIn(tween(300))
-                    ArticleAnswerTransitionDirection.HORIZONTAL_PREVIOUS ->
-                        slideInHorizontally(tween(300)) { -it } + fadeIn(tween(300))
-                    else -> slideInHorizontally(tween(300)) { it }
-                }
-            },
-            articleExitTransition = {
-                when (desktopArticleAnswerSwitchState.answerTransitionDirection) {
-                    ArticleAnswerTransitionDirection.VERTICAL_NEXT ->
-                        slideOutVertically(tween(300)) { -it } + fadeOut(tween(300))
-                    ArticleAnswerTransitionDirection.VERTICAL_PREVIOUS ->
-                        slideOutVertically(tween(300)) { it } + fadeOut(tween(300))
-                    ArticleAnswerTransitionDirection.HORIZONTAL_NEXT ->
-                        slideOutHorizontally(tween(300)) { -it } + fadeOut(tween(300))
-                    ArticleAnswerTransitionDirection.HORIZONTAL_PREVIOUS ->
-                        slideOutHorizontally(tween(300)) { it } + fadeOut(tween(300))
-                    else -> ExitTransition.None
-                }
-            },
-        )
-    }
+    ZhihuMain(
+        navController = navController,
+        mainTabNavigationTarget = mainTabNavigationTarget,
+        navigate = ::navigate,
+        setCurrentMainTabOpenFrom = { currentMainTabOpenFrom = it },
+        consumeMainTabNavigationTarget = { destination ->
+            if (mainTabNavigationTarget == destination) {
+                mainTabNavigationTarget = null
+            }
+        },
+        preferenceState = rememberDesktopZhihuMainPreferenceState(),
+        isDarkTheme = ThemeManager.isDarkTheme(),
+        articleEnterTransition = {
+            when (sharedArticleAnswerSwitchState.answerTransitionDirection) {
+                ArticleAnswerTransitionDirection.VERTICAL_NEXT ->
+                    slideInVertically(tween(300)) { it } + fadeIn(tween(300))
+                ArticleAnswerTransitionDirection.VERTICAL_PREVIOUS ->
+                    slideInVertically(tween(300)) { -it } + fadeIn(tween(300))
+                ArticleAnswerTransitionDirection.HORIZONTAL_NEXT ->
+                    slideInHorizontally(tween(300)) { it } + fadeIn(tween(300))
+                ArticleAnswerTransitionDirection.HORIZONTAL_PREVIOUS ->
+                    slideInHorizontally(tween(300)) { -it } + fadeIn(tween(300))
+                else -> slideInHorizontally(tween(300)) { it }
+            }
+        },
+        articleExitTransition = {
+            when (sharedArticleAnswerSwitchState.answerTransitionDirection) {
+                ArticleAnswerTransitionDirection.VERTICAL_NEXT ->
+                    slideOutVertically(tween(300)) { -it } + fadeOut(tween(300))
+                ArticleAnswerTransitionDirection.VERTICAL_PREVIOUS ->
+                    slideOutVertically(tween(300)) { it } + fadeOut(tween(300))
+                ArticleAnswerTransitionDirection.HORIZONTAL_NEXT ->
+                    slideOutHorizontally(tween(300)) { -it } + fadeOut(tween(300))
+                ArticleAnswerTransitionDirection.HORIZONTAL_PREVIOUS ->
+                    slideOutHorizontally(tween(300)) { it } + fadeOut(tween(300))
+                else -> ExitTransition.None
+            }
+        },
+        articleContent = { article: Article, navEntry ->
+            val articleViewModel: ArticleViewModel = viewModel(navEntry) {
+                ArticleViewModel(article, httpClient, userMessages)
+            }
+            ArticleScreen(article, articleViewModel)
+        },
+    )
 }
 
 /**
@@ -253,10 +253,11 @@ private fun rememberDesktopZhihuMainPreferenceState(): ZhihuMainPreferenceState 
         val selectedKeys = normalizeBottomBarSelection(
             settings.getStringSet(
                 BOTTOM_BAR_ITEMS_PREFERENCE_KEY,
-                defaultBottomBarSelectionKeys(duo3HomeAccount),
+                defaultBottomBarSelectionKeys(duo3HomeAccount, platformBottomBarItemLimit),
             ),
             duo3HomeAccount,
             enforceMinimumSelection = true,
+            maximumSelection = platformBottomBarItemLimit,
         )
         val orderedSelectedKeys = bottomBarItemOrderFromPreference(
             settings.getStringOrNull(BOTTOM_BAR_ITEM_ORDER_PREFERENCE_KEY),

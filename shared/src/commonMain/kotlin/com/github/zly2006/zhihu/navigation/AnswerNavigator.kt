@@ -211,15 +211,6 @@ class QuestionAnswerNavigator(
     initialPreviousAnswers: List<Article> = emptyList(),
     initialNextUrl: String = "",
     private val order: String? = null,
-    private val getAlreadyOpenedAnswerIds: suspend (List<Long>) -> Set<Long> = { answerIds ->
-        ContentOpenEventSupport
-            .getAlreadyOpenedContentIds(
-                database = getContentFilterDatabase(),
-                content = answerIds.map { ContentType.ANSWER to it.toString() },
-            ).mapNotNull { key ->
-                key.substringAfter(':', "").toLongOrNull()
-            }.toSet()
-    },
     environment: ZhihuApiEnvironment,
 ) : AnswerNavigator("此问题", environment) {
     private val pendingInitialNextAnswers = ArrayDeque<Article>().also { deque ->
@@ -310,7 +301,14 @@ class QuestionAnswerNavigator(
                         id !in knownOpenedIds
                 }.toList()
             if (idsToLookup.isNotEmpty()) {
-                knownOpenedIds += getAlreadyOpenedAnswerIds(idsToLookup)
+                knownOpenedIds += openedAnswerIdsReaderForTesting?.invoke(idsToLookup)
+                    ?: ContentOpenEventSupport
+                        .getAlreadyOpenedContentIds(
+                            database = getContentFilterDatabase(),
+                            content = idsToLookup.map { ContentType.ANSWER to it.toString() },
+                        ).mapNotNull { key ->
+                            key.substringAfter(':', "").toLongOrNull()
+                        }.toSet()
             }
             val partition = ContentOpenEventSupport.partitionQuestionAnswerCandidates(
                 candidates = candidates,
@@ -404,6 +402,8 @@ class QuestionAnswerNavigator(
         }
     }
 }
+
+var openedAnswerIdsReaderForTesting: (suspend (List<Long>) -> Set<Long>)? = null
 
 /**
  * 从收藏夹中导航回答。

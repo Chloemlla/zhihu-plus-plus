@@ -80,6 +80,8 @@ import com.github.zly2006.zhihu.navigation.Person
 import com.github.zly2006.zhihu.platform.UserMessageDuration
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.reading.RegisterReadingQueueSource
+import com.github.zly2006.zhihu.ui.TopLevelReselectAction
 import com.github.zly2006.zhihu.ui.components.DraggableRefreshButton
 import com.github.zly2006.zhihu.ui.components.FeedAuthorBlockConfirmDialog
 import com.github.zly2006.zhihu.ui.components.FeedAuthorBlockRequest
@@ -89,8 +91,8 @@ import com.github.zly2006.zhihu.ui.components.FeedPullToRefresh
 import com.github.zly2006.zhihu.ui.components.NoOpPagerNestedScrollConnection
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
-import com.github.zly2006.zhihu.ui.components.rememberFeedBlockActions
 import com.github.zly2006.zhihu.ui.components.rememberNestedHorizontalPagerConnection
+import com.github.zly2006.zhihu.ui.topLevelReselectAction
 import com.github.zly2006.zhihu.viewmodel.feed.FollowRecommendViewModel
 import com.github.zly2006.zhihu.viewmodel.feed.FollowViewModel
 import com.github.zly2006.zhihu.viewmodel.feed.RecentMomentsViewModel
@@ -118,48 +120,19 @@ const val FOLLOW_DYNAMIC_REFRESH_BUTTON_TAG = "follow_dynamic_refresh_button"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FollowScreen(
-    scrollToTopTrigger: Int,
-    innerPadding: PaddingValues,
-    parentPagerState: PagerState,
-): Unit = FollowScreenContent(
-    scrollToTopTrigger = scrollToTopTrigger,
-    innerPadding = innerPadding,
-    parentPagerState = parentPagerState,
-    onTestRecommendRefreshClick = null,
-    onTestRecommendLoadMore = null,
-    onTestDynamicRefreshClick = null,
-    onTestDynamicLoadMore = null,
-)
-
-/**
- * 关注页的测试入口。
- *
- * 与生产入口使用同一套 UI 内容，但允许测试注入刷新和加载更多回调，避免 instrumentation 测试依赖真实网络或分页状态。
- */
-@Composable
-fun FollowScreen(
     scrollToTopTrigger: Int = 0,
     innerPadding: PaddingValues,
     parentPagerState: PagerState,
-    onTestRecommendRefreshClick: (() -> Unit)?,
-    onTestRecommendLoadMore: (() -> Unit)?,
-    onTestDynamicRefreshClick: (() -> Unit)?,
-    onTestDynamicLoadMore: (() -> Unit)?,
 ): Unit = FollowScreenContent(
     scrollToTopTrigger = scrollToTopTrigger,
     innerPadding = innerPadding,
     parentPagerState = parentPagerState,
-    onTestRecommendRefreshClick = onTestRecommendRefreshClick,
-    onTestRecommendLoadMore = onTestRecommendLoadMore,
-    onTestDynamicRefreshClick = onTestDynamicRefreshClick,
-    onTestDynamicLoadMore = onTestDynamicLoadMore,
 )
 
 /**
  * 关注页的实际布局实现。
  *
  * 页面内部用横向 pager 承载“推荐”和“动态”两个 tab，并把 tab 切换、列表刷新、加载更多和主壳的回到顶部触发集中在这里。
- * 因为它同时被生产入口和测试入口复用，新增 UI 状态时要保持默认参数可测试。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -167,10 +140,6 @@ private fun FollowScreenContent(
     scrollToTopTrigger: Int = 0,
     innerPadding: PaddingValues = PaddingValues(0.dp),
     parentPagerState: PagerState,
-    onTestRecommendRefreshClick: (() -> Unit)? = null,
-    onTestRecommendLoadMore: (() -> Unit)? = null,
-    onTestDynamicRefreshClick: (() -> Unit)? = null,
-    onTestDynamicLoadMore: (() -> Unit)? = null,
 ) {
     val viewModel = viewModel { FollowScreenData() }
     val titles = listOf("推荐", "动态")
@@ -216,15 +185,11 @@ private fun FollowScreenContent(
                 0 -> FollowRecommendScreen(
                     scrollToTopTrigger = scrollToTopTrigger,
                     isActive = pagerState.currentPage == 0,
-                    onTestRefreshClick = onTestRecommendRefreshClick,
-                    onTestLoadMore = onTestRecommendLoadMore,
                 )
 
                 1 -> FollowDynamicScreen(
                     scrollToTopTrigger = scrollToTopTrigger,
                     isActive = pagerState.currentPage == 1,
-                    onTestRefreshClick = onTestDynamicRefreshClick,
-                    onTestLoadMore = onTestDynamicLoadMore,
                 )
             }
         }
@@ -369,14 +334,18 @@ fun FollowingUsersRow() {
 fun FollowRecommendScreen(
     scrollToTopTrigger: Int = 0,
     isActive: Boolean = true,
-    onTestRefreshClick: (() -> Unit)? = null,
-    onTestLoadMore: (() -> Unit)? = null,
 ) {
     val viewModel: FollowRecommendViewModel = viewModel { FollowRecommendViewModel() }
+    val readingQueueSourceId = "follow:recommend"
+    if (isActive) {
+        RegisterReadingQueueSource(
+            sourceId = readingQueueSourceId,
+            items = viewModel.displayItems,
+        )
+    }
     val environment = rememberPaginationEnvironment(allowGuestAccess = viewModel.allowGuestAccess)
     val settings = rememberSettingsStore()
     val userMessages = rememberUserMessageSink()
-    val feedBlockActions = rememberFeedBlockActions()
     val showRefreshFab = remember { settings.getBoolean("showRefreshFab", true) }
     val listState = rememberLazyListState()
     var cachedScrollToTopTrigger by remember { mutableIntStateOf(scrollToTopTrigger) }
@@ -421,18 +390,19 @@ fun FollowRecommendScreen(
                         FollowingUsersRow()
                     }
                 },
-                onLoadMore = { onTestLoadMore?.invoke() ?: viewModel.loadMore(environment) },
+                onLoadMore = { viewModel.loadMore(environment) },
                 footer = ProgressIndicatorFooter,
             ) { item ->
                 FeedCard(
                     item = item,
+                    readingQueueSourceId = readingQueueSourceId.takeIf { isActive },
                     modifier = Modifier.testTag("follow_recommend_item_${item.stableKey}"),
                     menuItems = { dismissMenu ->
                         DropdownMenuItem(
                             text = { Text("屏蔽用户") },
                             onClick = {
                                 dismissMenu()
-                                feedBlockActions.handleBlockUser(viewModel, item) { authorInfo ->
+                                viewModel.handleBlockUser(environment, userMessages, item) { authorInfo ->
                                     feedAuthorBlockRequest = FeedAuthorBlockRequest(
                                         FeedAuthorBlockType.CONTENT_AUTHOR,
                                         authorInfo.first,
@@ -450,7 +420,7 @@ fun FollowRecommendScreen(
                                 text = { Text("屏蔽提问者") },
                                 onClick = {
                                     dismissMenu()
-                                    feedBlockActions.handleBlockQuestionAuthor(viewModel, item) { authorInfo ->
+                                    viewModel.handleBlockQuestionAuthor(environment, userMessages, item) { authorInfo ->
                                         feedAuthorBlockRequest = FeedAuthorBlockRequest(
                                             FeedAuthorBlockType.QUESTION_AUTHOR,
                                             authorInfo.first,
@@ -472,7 +442,7 @@ fun FollowRecommendScreen(
                                 text = { Text("屏蔽「${topic.name}」") },
                                 onClick = {
                                     dismissMenu()
-                                    feedBlockActions.handleBlockTopic(viewModel, topic.id, topic.name)
+                                    viewModel.handleBlockTopic(userMessages, topic.id, topic.name)
                                 },
                             )
                         }
@@ -484,7 +454,7 @@ fun FollowRecommendScreen(
                 DraggableRefreshButton(
                     modifier = Modifier.testTag(FOLLOW_RECOMMEND_REFRESH_BUTTON_TAG),
                     onClick = {
-                        onTestRefreshClick?.invoke() ?: viewModel.refresh(environment)
+                        viewModel.refresh(environment)
                     },
                 ) {
                     if (viewModel.isLoading) {
@@ -512,14 +482,18 @@ fun FollowRecommendScreen(
 fun FollowDynamicScreen(
     scrollToTopTrigger: Int = 0,
     isActive: Boolean = true,
-    onTestRefreshClick: (() -> Unit)? = null,
-    onTestLoadMore: (() -> Unit)? = null,
 ) {
     val viewModel: FollowViewModel = viewModel { FollowViewModel() }
+    val readingQueueSourceId = "follow:dynamic"
+    if (isActive) {
+        RegisterReadingQueueSource(
+            sourceId = readingQueueSourceId,
+            items = viewModel.displayItems,
+        )
+    }
     val environment = rememberPaginationEnvironment(allowGuestAccess = viewModel.allowGuestAccess)
     val settings = rememberSettingsStore()
     val userMessages = rememberUserMessageSink()
-    val feedBlockActions = rememberFeedBlockActions()
     val showRefreshFab = remember { settings.getBoolean("showRefreshFab", true) }
     val listState = rememberLazyListState()
     var cachedScrollToTopTrigger by remember { mutableIntStateOf(scrollToTopTrigger) }
@@ -559,7 +533,7 @@ fun FollowDynamicScreen(
                 items = viewModel.displayItems,
                 listState = listState,
                 modifier = Modifier.testTag(FOLLOW_DYNAMIC_LIST_TAG),
-                onLoadMore = { onTestLoadMore?.invoke() ?: viewModel.loadMore(environment) },
+                onLoadMore = { viewModel.loadMore(environment) },
                 topContent = {
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -569,6 +543,7 @@ fun FollowDynamicScreen(
             ) { item ->
                 FeedCard(
                     item = item,
+                    readingQueueSourceId = readingQueueSourceId.takeIf { isActive },
                     modifier = Modifier.testTag("follow_dynamic_item_${item.stableKey}"),
                     showSourceLabel = true,
                     menuItems = { dismissMenu ->
@@ -576,7 +551,7 @@ fun FollowDynamicScreen(
                             text = { Text("屏蔽用户") },
                             onClick = {
                                 dismissMenu()
-                                feedBlockActions.handleBlockUser(viewModel, item) { authorInfo ->
+                                viewModel.handleBlockUser(environment, userMessages, item) { authorInfo ->
                                     feedAuthorBlockRequest = FeedAuthorBlockRequest(
                                         FeedAuthorBlockType.CONTENT_AUTHOR,
                                         authorInfo.first,
@@ -594,7 +569,7 @@ fun FollowDynamicScreen(
                                 text = { Text("屏蔽提问者") },
                                 onClick = {
                                     dismissMenu()
-                                    feedBlockActions.handleBlockQuestionAuthor(viewModel, item) { authorInfo ->
+                                    viewModel.handleBlockQuestionAuthor(environment, userMessages, item) { authorInfo ->
                                         feedAuthorBlockRequest = FeedAuthorBlockRequest(
                                             FeedAuthorBlockType.QUESTION_AUTHOR,
                                             authorInfo.first,
@@ -616,7 +591,7 @@ fun FollowDynamicScreen(
                                 text = { Text("屏蔽「${topic.name}」") },
                                 onClick = {
                                     dismissMenu()
-                                    feedBlockActions.handleBlockTopic(viewModel, topic.id, topic.name)
+                                    viewModel.handleBlockTopic(userMessages, topic.id, topic.name)
                                 },
                             )
                         }
@@ -628,7 +603,7 @@ fun FollowDynamicScreen(
                 DraggableRefreshButton(
                     modifier = Modifier.testTag(FOLLOW_DYNAMIC_REFRESH_BUTTON_TAG),
                     onClick = {
-                        onTestRefreshClick?.invoke() ?: viewModel.refresh(environment)
+                        viewModel.refresh(environment)
                     },
                 ) {
                     if (viewModel.isLoading) {

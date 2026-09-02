@@ -22,6 +22,7 @@ import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
 import com.github.zly2006.zhihu.platform.androidSettingsStore
+import com.github.zly2006.zhihu.util.ContinuousUsageReminderPolicy
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -30,6 +31,10 @@ import kotlinx.coroutines.launch
 class ContinuousUsageReminderManager(
     private val activity: ComponentActivity,
 ) {
+    init {
+        current = this
+    }
+
     private val settingsStore by lazy { androidSettingsStore(activity) }
 
     private var policy = ContinuousUsageReminderPolicy(loadIntervalMinutes())
@@ -72,6 +77,7 @@ class ContinuousUsageReminderManager(
         checkJob = null
         reminderDialog?.dismiss()
         reminderDialog = null
+        if (current === this) current = null
     }
 
     private fun ensureCheckLoop() {
@@ -139,6 +145,10 @@ class ContinuousUsageReminderManager(
     }
 
     companion object {
+        private var current: ContinuousUsageReminderManager? = null
+
+        fun currentElapsedForegroundMs(): Long = current?.currentElapsedForegroundMs() ?: 0L
+
         const val KEY_CONTINUOUS_USAGE_REMINDER_INTERVAL_MINUTES = "continuousUsageReminderIntervalMinutes"
         private const val KEY_SESSION_ACCUMULATED_FOREGROUND_MS = "continuousUsageReminderSessionAccumulatedMs"
         private const val KEY_SESSION_LAST_BACKGROUND_WALL_CLOCK_MS = "continuousUsageReminderLastBackgroundWallClockMs"

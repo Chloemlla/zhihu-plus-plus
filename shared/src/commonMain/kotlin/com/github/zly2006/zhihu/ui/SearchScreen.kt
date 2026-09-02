@@ -105,7 +105,6 @@ import com.github.zly2006.zhihu.ui.components.FeedCard
 import com.github.zly2006.zhihu.ui.components.FeedPullToRefresh
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
-import com.github.zly2006.zhihu.ui.components.rememberFeedBlockActions
 import com.github.zly2006.zhihu.util.parseEmphasizedHtmlTextWithTheme
 import com.github.zly2006.zhihu.viewmodel.PaginationEnvironment
 import com.github.zly2006.zhihu.viewmodel.feed.SearchContentType
@@ -156,14 +155,11 @@ private fun saveSearchHistory(
 @Composable
 fun SearchScreen(
     search: Search,
-    testHotSearchQueries: List<String>? = null,
-    onTestHotSearchRefresh: (() -> Unit)? = null,
 ) {
     val navigator = LocalNavigator.current
     val userMessages = rememberUserMessageSink()
     val settings = rememberSettingsStore()
     val viewModel = viewModel { SearchViewModel(search.query, search.restrictedMemberHashId) }
-    val feedBlockActions = rememberFeedBlockActions()
     val readingQueueSourceId = buildString {
         append("search:")
         append(search.restrictedMemberHashId)
@@ -196,16 +192,11 @@ fun SearchScreen(
     val shouldAutoFocusSearchInput = search.query.isBlank()
 
     val showHotSearch = remember { mutableStateOf(!isMemberSearch && settings.getBoolean("showSearchHotSearch", true)) }
-    val hotSearchItems = remember(testHotSearchQueries) {
-        mutableStateListOf<HotSearchItem>().apply {
-            addAll(testHotSearchQueries.orEmpty().map { query -> HotSearchItem(query = query) })
-        }
-    }
+    val hotSearchItems = remember { mutableStateListOf<HotSearchItem>() }
     var hotSearchMoreMenuExpanded by remember { mutableStateOf(false) }
     var historyMoreMenuExpanded by remember { mutableStateOf(false) }
     var filterMenuExpanded by remember { mutableStateOf(false) }
     var feedAuthorBlockRequest by remember { mutableStateOf<FeedAuthorBlockRequest?>(null) }
-    val useTestHotSearchQueries = testHotSearchQueries != null
     val showSearchHistory = remember { mutableStateOf(!isMemberSearch && settings.getBoolean("showSearchHistory", true)) }
     val searchHistoryItems = remember {
         mutableStateListOf<String>().apply {
@@ -285,8 +276,8 @@ fun SearchScreen(
         }
     }
 
-    LaunchedEffect(showHotSearch.value, useTestHotSearchQueries, isMemberSearch) {
-        if (!isMemberSearch && showHotSearch.value && !useTestHotSearchQueries) {
+    LaunchedEffect(showHotSearch.value, isMemberSearch) {
+        if (!isMemberSearch && showHotSearch.value) {
             runCatching { fetchHotSearch() }
         }
     }
@@ -496,11 +487,7 @@ fun SearchScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     IconButton(
                                         onClick = {
-                                            if (useTestHotSearchQueries) {
-                                                onTestHotSearchRefresh?.invoke()
-                                            } else {
-                                                coroutineScope.launch { runCatching { fetchHotSearch() } }
-                                            }
+                                            coroutineScope.launch { runCatching { fetchHotSearch() } }
                                         },
                                         modifier = Modifier
                                             .size(40.dp)
@@ -716,12 +703,17 @@ fun SearchScreen(
                             is SearchEntity.Content -> FeedCard(
                                 item = result.item,
                                 modifier = Modifier.testTag("search_general_content_${result.id}"),
+                                readingQueueSourceId = readingQueueSourceId,
                                 menuItems = { dismissMenu ->
                                     DropdownMenuItem(
                                         text = { Text("屏蔽用户") },
                                         onClick = {
                                             dismissMenu()
-                                            feedBlockActions.handleBlockUser(viewModel, result.item) { authorInfo ->
+                                            viewModel.handleBlockUser(
+                                                paginationEnvironment,
+                                                userMessages,
+                                                result.item,
+                                            ) { authorInfo ->
                                                 feedAuthorBlockRequest = FeedAuthorBlockRequest(
                                                     FeedAuthorBlockType.CONTENT_AUTHOR,
                                                     authorInfo.first,

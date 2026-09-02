@@ -23,7 +23,6 @@ import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
@@ -36,24 +35,26 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import com.github.zly2006.zhihu.aigc.AIGC_MARKING_ENABLED_PREFERENCE_KEY
-import com.github.zly2006.zhihu.aigc.AigcVoteClient
-import com.github.zly2006.zhihu.aigc.AigcVoteVoter
+import com.github.zly2006.zhihu.account.androidZhihuAccountStore
+import com.github.zly2006.zhihu.data.AIGC_MARKING_ENABLED_PREFERENCE_KEY
 import com.github.zly2006.zhihu.data.AccountData
+import com.github.zly2006.zhihu.data.AigcVoteVoter
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
 import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.data.HistoryStorage
 import com.github.zly2006.zhihu.data.ZhihuCookieStorage
 import com.github.zly2006.zhihu.data.ZhihuJson.json
+import com.github.zly2006.zhihu.data.asApiEnvironment
 import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.filter.ContentOpenEventSupport
 import com.github.zly2006.zhihu.navigation.NavDestination
+import com.github.zly2006.zhihu.navigation.requestLoginNavigation
 import com.github.zly2006.zhihu.notification.NotificationSettingsStore
 import com.github.zly2006.zhihu.platform.androidSettingsStore
 import com.github.zly2006.zhihu.platform.androidUserMessageSink
-import com.github.zly2006.zhihu.ui.articleHost
+import com.github.zly2006.zhihu.ui.AndroidArticleNavigationHandoff
 import com.github.zly2006.zhihu.util.HttpStatusException
 import com.github.zly2006.zhihu.util.ResolvedCollectionHtmlExportItem
 import com.github.zly2006.zhihu.util.buildArticleExportFileName
@@ -61,7 +62,8 @@ import com.github.zly2006.zhihu.util.buildOfflineArticleExportHtml
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.exportCollectionItemsToZip
 import com.github.zly2006.zhihu.util.saveBitmapToGallery
-import com.github.zly2006.zhihu.viewmodel.filter.AndroidContentFilterRuntime
+import com.github.zly2006.zhihu.viewmodel.QUALITY_FILTER_MODE_PREFERENCE_KEY
+import com.github.zly2006.zhihu.viewmodel.QualityFilterMode
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedKeywordService
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedQuestionAuthor
 import com.github.zly2006.zhihu.viewmodel.filter.BlockedUser
@@ -70,9 +72,12 @@ import com.github.zly2006.zhihu.viewmodel.filter.ContentType
 import com.github.zly2006.zhihu.viewmodel.filter.FeedContentFilterPipeline
 import com.github.zly2006.zhihu.viewmodel.filter.FeedDisplayFilterPipeline
 import com.github.zly2006.zhihu.viewmodel.filter.ForegroundReadFilterPipeline
+import com.github.zly2006.zhihu.viewmodel.filter.androidKeywordSemanticMatcher
 import com.github.zly2006.zhihu.viewmodel.filter.contentFilterSettings
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.local.LocalRecommendationEngine
+import com.github.zly2006.zhihu.viewmodel.local.buildLocalRecommendationEngine
+import com.github.zly2006.zhihu.viewmodel.local.getLocalContentDatabase
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.UserAgent
 import io.ktor.client.plugins.api.createClientPlugin
@@ -108,7 +113,7 @@ private val ZHIHU_PP_ANDROID_HEADERS = createClientPlugin("ZhihuPPAndroidHeaders
 }
 
 private const val AIGC_VOTE_CLIENT_ID_KEY = "aigcVoteClientId"
-private const val AIGC_VOTE_SERVER_URL_KEY = "aigcVoteServerUrl"
+internal const val AIGC_VOTE_SERVER_URL_KEY = "aigcVoteServerUrl"
 private const val DEFAULT_ANDROID_AIGC_VOTE_SERVER_URL = "https://aigc-vote.ai.fintechedu.cn"
 
 open class SharedAndroidPaginationEnvironment(
@@ -116,7 +121,10 @@ open class SharedAndroidPaginationEnvironment(
     private val allowGuestAccess: Boolean,
 ) : AndroidContextPaginationEnvironment,
     CollectionContentEnvironment {
-    private val localRecommendationEngine by lazy { LocalRecommendationEngine(context) }
+    private val localRecommendationEngine by lazy {
+        val dao = getLocalContentDatabase(context).contentDao()
+        buildLocalRecommendationEngine(dao, context.asApiEnvironment())
+    }
     private val settingsStore by lazy { androidSettingsStore(context) }
     private val userMessageSink by lazy { androidUserMessageSink(context) }
     private val aigcVoteHttpClient by lazy {
@@ -125,13 +133,6 @@ open class SharedAndroidPaginationEnvironment(
                 json(json)
             }
         }
-    }
-    private val aigcVoteClient by lazy {
-        AigcVoteClient(
-            httpClient = aigcVoteHttpClient,
-            baseUrl = aigcVoteServerUrl(),
-            clientId = aigcVoteClientId(),
-        )
     }
 
     override fun httpClient(): HttpClient {
@@ -147,7 +148,7 @@ open class SharedAndroidPaginationEnvironment(
                 }
             }
         }
-        return AccountData.httpClient(context)
+        return androidZhihuAccountStore(context).client.httpClient()
     }
 
     override fun mobileHomeFeedHttpClient(): HttpClient {
@@ -171,12 +172,14 @@ open class SharedAndroidPaginationEnvironment(
         }
     }
 
-    override fun aigcVoteClient(): AigcVoteClient? =
-        if (settingsStore.getBoolean(AIGC_MARKING_ENABLED_PREFERENCE_KEY, false)) {
-            aigcVoteClient
-        } else {
-            null
-        }
+    override fun isAigcVoteEnabled(): Boolean =
+        settingsStore.getBoolean(AIGC_MARKING_ENABLED_PREFERENCE_KEY, false)
+
+    override fun aigcVoteHttpClient(): HttpClient = aigcVoteHttpClient
+
+    override fun aigcVoteBaseUrl(): String = aigcVoteServerUrl()
+
+    override fun aigcVoteClientId(): String = aigcVoteClientIdValue()
 
     override fun aigcVoteVoter(): AigcVoteVoter? =
         AccountData.data.self?.let { self ->
@@ -202,7 +205,7 @@ open class SharedAndroidPaginationEnvironment(
             .getString(AIGC_VOTE_SERVER_URL_KEY, DEFAULT_ANDROID_AIGC_VOTE_SERVER_URL)
             .ifBlank { DEFAULT_ANDROID_AIGC_VOTE_SERVER_URL }
 
-    private fun aigcVoteClientId(): String {
+    private fun aigcVoteClientIdValue(): String {
         settingsStore.getStringOrNull(AIGC_VOTE_CLIENT_ID_KEY)?.takeIf { it.isNotBlank() }?.let {
             return it
         }
@@ -223,16 +226,12 @@ open class SharedAndroidPaginationEnvironment(
             showDebugErrorDialog(error)
         }
         Log.e(tag, "Failed to fetch feeds", error)
-        context.mainExecutor.execute {
-            userMessageSink.showShortMessage("加载失败: ${error.message}")
-        }
+        userMessageSink.showShortMessage("加载失败: ${error.message}")
     }
 
     override suspend fun handleMobileHomeFeedFailure(error: Exception) {
         Log.e("AndroidHomeFeedViewModel", "Failed to fetch feeds", error)
-        context.mainExecutor.execute {
-            userMessageSink.showShortMessage("安卓端推荐加载失败: ${error.message}")
-        }
+        userMessageSink.showShortMessage("安卓端推荐加载失败: ${error.message}")
     }
 
     override fun feedDisplaySettings(): FeedDisplaySettings = FeedDisplaySettings(
@@ -318,7 +317,7 @@ open class SharedAndroidPaginationEnvironment(
         openFrom: String,
     ) {
         val resolvedOpenFrom = openFrom.ifBlank {
-            context.articleHost()?.consumePendingContentOpenFrom(destination) ?: ""
+            AndroidArticleNavigationHandoff.consumeContentOpenFrom(destination)
         }
         ContentOpenEventSupport.recordOpenEvent(
             database = getContentFilterDatabase(context),
@@ -360,23 +359,15 @@ open class SharedAndroidPaginationEnvironment(
                 blockedKeywordService = BlockedKeywordService(
                     keywordDao = filterDatabase.blockedKeywordDao(),
                     recordDao = filterDatabase.blockedContentRecordDao(),
-                    semanticMatcher = AndroidContentFilterRuntime.semanticMatcher,
+                    semanticMatcher = androidKeywordSemanticMatcher,
                 ),
                 onNlpBlocked = { blockedThisRound ->
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        context.mainExecutor.execute {
-                            userMessageSink.showShortMessage("NLP 已屏蔽 ${blockedThisRound.first().title.take(10)}... 等 ${blockedThisRound.size} 条内容")
-                        }
+                        userMessageSink.showShortMessage("NLP 已屏蔽 ${blockedThisRound.first().title.take(10)}... 等 ${blockedThisRound.size} 条内容")
                     }
                 },
             ),
             blockedFeedRecordDao = filterDatabase.blockedFeedRecordDao(),
-            onDetailFetchFailed = { item ->
-                Log.w("ContentFilterExtensions", "Failed to fetch content details for item '${item.title}'. Using dummy content for filtering.")
-            },
-            onDetailsKeywordFiltered = { item, keyword ->
-                Log.e("ContentFilterExtensions", "Filtered item '${item.title}' due to keyword '$keyword' in details: ${item.content}")
-            },
         ).filter(items)
     }
 
@@ -424,8 +415,6 @@ open class SharedAndroidPaginationEnvironment(
                 .show()
         }
     }
-
-    override fun articleAnswerSwitchState() = context.articleHost()?.articleAnswerSwitchState
 
     override suspend fun exportCollectionItemsToHtmlZip(
         collectionTitle: String,
@@ -479,9 +468,7 @@ open class SharedAndroidPaginationEnvironment(
 
     override suspend fun handleCollectionExportFailure(error: Exception) {
         Log.e("CollectionContentViewModel", "Failed to export collection HTML zip", error)
-        context.mainExecutor.execute {
-            userMessageSink.showShortMessage("导出失败: ${error.message}")
-        }
+        userMessageSink.showShortMessage("导出失败: ${error.message}")
     }
 
     private suspend fun resolveCollectionItemForHtmlExport(
@@ -522,13 +509,8 @@ open class SharedAndroidPaginationEnvironment(
                             .setTitle("登录已过期")
                             .setMessage("请重新登录以继续使用完整功能。")
                             .setPositiveButton("重新登录") { _, _ ->
-                                AccountData.delete(context)
-                                context.startActivity(
-                                    Intent().setClassName(
-                                        context.packageName,
-                                        "com.github.zly2006.zhihu.LoginActivity",
-                                    ),
-                                )
+                                androidZhihuAccountStore(context).clear()
+                                requestLoginNavigation()
                             }.setNegativeButton("取消", null)
                             .show()
                     }
@@ -640,8 +622,8 @@ open class SharedAndroidPaginationEnvironment(
         return file.absolutePath
     }
 
-    override fun articleImageExportRenderer(loadAssetText: (String) -> String): ArticleImageExportRenderer =
-        AndroidArticleExportRenderer(context, loadAssetText)
+    override fun articleImageExportRenderer(): ArticleImageExportRenderer =
+        AndroidArticleExportRenderer(context)
 
     override fun hasImageExportPermission(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ||
@@ -684,12 +666,6 @@ actual fun rememberPaginationEnvironment(allowGuestAccess: Boolean): PaginationE
     val context = LocalContext.current
     return remember(context, allowGuestAccess) { SharedAndroidPaginationEnvironment(context, allowGuestAccess) }
 }
-
-fun PaginationViewModel<*>.notificationEnvironment(
-    context: Context,
-    notificationSettingsStore: NotificationSettingsStore,
-): NotificationEnvironment =
-    SharedAndroidNotificationEnvironment(context, allowGuestAccess, notificationSettingsStore)
 
 fun PaginationViewModel<*>.refresh(context: Context) {
     refresh(paginationEnvironment(context))

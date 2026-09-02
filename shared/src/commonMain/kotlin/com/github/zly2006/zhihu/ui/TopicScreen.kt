@@ -95,7 +95,7 @@ import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
 import com.github.zly2006.zhihu.ui.components.ShareDialog
 import com.github.zly2006.zhihu.ui.components.getShareText
 import com.github.zly2006.zhihu.ui.components.handleShareAction
-import com.github.zly2006.zhihu.ui.components.rememberShareDialogRuntime
+import com.github.zly2006.zhihu.ui.components.rememberShareActionExecutor
 import com.github.zly2006.zhihu.util.raiseForStatus
 import com.github.zly2006.zhihu.viewmodel.PaginationEnvironment
 import com.github.zly2006.zhihu.viewmodel.ZhihuApiEnvironment
@@ -426,7 +426,7 @@ fun TopicScreen(topic: Topic) {
     val environment = rememberPaginationEnvironment(allowGuestAccess = false)
     val messages = rememberUserMessageSink()
     val settings = rememberSettingsStore()
-    val executeShareAction = rememberShareDialogRuntime()
+    val executeShareAction = rememberShareActionExecutor()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var showShareDialog by androidx.compose.runtime.remember { mutableStateOf(false) }
     var isIntroductionExpanded by rememberSaveable(topic.id) { mutableStateOf(false) }

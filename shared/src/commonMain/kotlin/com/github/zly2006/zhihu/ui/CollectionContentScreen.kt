@@ -57,12 +57,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastJoinToString
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.zly2006.zhihu.data.FeedDisplayItem
-import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.CollectionAnswerNavigator
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.platform.PlatformBackHandler
+import com.github.zly2006.zhihu.reading.RegisterReadingQueueSource
 import com.github.zly2006.zhihu.ui.components.FeedCard
 import com.github.zly2006.zhihu.ui.components.PaginatedList
 import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
@@ -71,6 +71,7 @@ import com.github.zly2006.zhihu.viewmodel.CollectionContentViewModel
 import com.github.zly2006.zhihu.viewmodel.CollectionHtmlExportDialogState
 import com.github.zly2006.zhihu.viewmodel.formatArticleDateTime
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
+import com.github.zly2006.zhihu.viewmodel.sharedArticleAnswerSwitchState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,7 +188,12 @@ internal fun CollectionContentBody(
     displayItems: List<FeedDisplayItem> = viewModel.displayItems,
 ) {
     val navigator = LocalNavigator.current
-    val sharedData = environment.articleAnswerSwitchState()
+    val sharedData = sharedArticleAnswerSwitchState
+    val readingQueueSourceId = "collection:$collectionId:contents"
+    RegisterReadingQueueSource(
+        sourceId = readingQueueSourceId,
+        items = displayItems,
+    )
 
     val visibleCollectionItems = displayItems.mapNotNull { displayItem ->
         val sourceIndex = viewModel.displayItems.indexOf(displayItem)
@@ -221,13 +227,13 @@ internal fun CollectionContentBody(
     ) { item ->
         FeedCard(
             item = item,
+            readingQueueSourceId = readingQueueSourceId,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
                 .testTag("${tagPrefix}_item_${item.stableKey}"),
-        ) {
-            val dest = navDestination
-            if (dest is Article && dest.type == ArticleType.Answer && sharedData != null) {
+        ) { _, destination ->
+            if (destination is Article && destination.type == ArticleType.Answer) {
                 val index = displayItems.indexOf(item)
                 val nextItems = if (index >= 0) visibleCollectionItems.drop(index + 1) else emptyList()
                 val previousItems = if (index > 0) visibleCollectionItems.take(index).reversed() else emptyList()
@@ -236,10 +242,11 @@ internal fun CollectionContentBody(
                     collectionTitle = viewModel.title,
                     initialNextItems = nextItems,
                     initialPreviousItems = previousItems,
+                    initialNextUrl = viewModel.nextPageUrl,
                     environment = environment,
                 )
             }
-            dest?.let(navigator.onNavigate)
+            destination?.let(navigator.onNavigate)
         }
     }
 }

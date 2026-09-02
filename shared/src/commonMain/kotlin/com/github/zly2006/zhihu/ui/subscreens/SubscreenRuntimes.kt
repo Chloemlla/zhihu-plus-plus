@@ -16,76 +16,17 @@
  */
 
 package com.github.zly2006.zhihu.ui.subscreens
+
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import com.github.zly2006.zhihu.platform.rememberSettingsStore
-import com.github.zly2006.zhihu.theme.ThemeManager
-import com.github.zly2006.zhihu.theme.ThemeMode
 import com.github.zly2006.zhihu.ui.TtsState
 import kotlinx.coroutines.flow.StateFlow
 
-data class ThemeSettingsRuntime(
-    val setThemeMode: (ThemeMode) -> Unit,
-    val setUseDynamicColor: (Boolean) -> Unit,
-    val setCustomColor: (Color) -> Unit,
-    val setBackgroundColor: (Color, Boolean) -> Unit,
-)
-
-@Composable
-fun rememberThemeSettingsRuntime(): ThemeSettingsRuntime {
-    val settings = rememberSettingsStore()
-    return remember(settings) {
-        ThemeSettingsRuntime(
-            setThemeMode = { mode ->
-                ThemeManager.setThemeMode(mode)
-                settings.putString("themeMode", mode.name)
-            },
-            setUseDynamicColor = { enabled ->
-                ThemeManager.setUseDynamicColor(enabled)
-                settings.putBoolean("useDynamicColor", enabled)
-            },
-            setCustomColor = { color ->
-                ThemeManager.setCustomColor(color)
-                settings.putInt("customThemeColor", color.toArgb())
-            },
-            setBackgroundColor = { color, isDark ->
-                ThemeManager.setBackgroundColor(color, isDark)
-                settings.putInt(if (isDark) "backgroundColorDark" else "backgroundColorLight", color.toArgb())
-            },
-        )
-    }
-}
+expect val isWebViewCustomFontSupported: Boolean
 
 @Composable
 expect fun WebViewCustomFontSettings(
     customFontName: String?,
     onCustomFontNameChange: (String?) -> Unit,
-)
-
-data class ClashPartnerSettingsRuntime(
-    val supported: Boolean,
-    val isAutoAdaptEnabled: Boolean,
-    val setAutoAdaptEnabled: (Boolean) -> Unit,
-    val statusLabel: String,
-    val refresh: () -> Unit = {},
-)
-
-@Composable
-expect fun rememberClashPartnerSettingsRuntime(): ClashPartnerSettingsRuntime
-
-data class SystemUpdateRuntime(
-    val state: StateFlow<SystemUpdateState>,
-    val autoCheckEnabled: () -> Boolean,
-    val setAutoCheckEnabled: (Boolean) -> Unit,
-    val checkForUpdate: suspend () -> Unit,
-    val skipVersion: (String) -> Unit,
-    val resetToNoUpdate: () -> Unit,
-    val downloadUpdate: suspend (String) -> Unit,
-    val installDownloadedUpdate: suspend () -> Unit,
-    val setError: (String) -> Unit,
-    val supportsApkInstall: Boolean,
 )
 
 sealed interface SystemUpdateState {
@@ -113,29 +54,50 @@ sealed interface SystemUpdateState {
 }
 
 @Composable
-expect fun rememberSystemUpdateRuntime(): SystemUpdateRuntime
+expect fun rememberSystemUpdateState(): StateFlow<SystemUpdateState>
 
-data class DeveloperRuntimeInfo(
+interface SystemUpdateChecker {
+    suspend fun check()
+}
+
+interface SystemUpdateVersionSkipper {
+    fun skip(version: String)
+}
+
+interface SystemUpdateDownloader {
+    suspend fun download(url: String)
+}
+
+interface DownloadedSystemUpdateInstaller {
+    suspend fun install()
+}
+
+@Composable
+expect fun rememberSystemUpdateChecker(): SystemUpdateChecker
+
+@Composable
+expect fun rememberSystemUpdateVersionSkipper(): SystemUpdateVersionSkipper
+
+@Composable
+expect fun rememberSystemUpdateDownloader(): SystemUpdateDownloader
+
+@Composable
+expect fun rememberDownloadedSystemUpdateInstaller(): DownloadedSystemUpdateInstaller
+
+expect fun resetSystemUpdateState()
+
+expect fun setSystemUpdateError(message: String)
+
+expect val isApkUpdateInstallSupported: Boolean
+
+data class DeveloperInfoSnapshot(
+    val networkStatus: String = "网络状态：未知",
+    val powerSaveModeText: String? = null,
     val continuousUsageDurationMs: Long = 0L,
     val ttsState: TtsState = TtsState.Uninitialized,
     val currentTtsEngineLabel: String = "未初始化",
     val availableTtsEngineLabels: List<String> = emptyList(),
 )
 
-interface DeveloperRuntimeInfoProvider {
-    val developerRuntimeInfo: DeveloperRuntimeInfo
-}
-
-data class DeveloperSettingsRuntime(
-    val cookies: () -> Map<String, String>,
-    val networkStatus: () -> String,
-    val powerSaveModeText: () -> String?,
-    val runtimeInfo: () -> DeveloperRuntimeInfo,
-    val verifyLogin: suspend (Map<String, String>) -> Boolean,
-    val refreshToken: suspend () -> Unit,
-    val saveCookies: (Map<String, String>) -> Unit,
-    val signedGet: suspend (String) -> String,
-)
-
 @Composable
-expect fun rememberDeveloperSettingsRuntime(): DeveloperSettingsRuntime
+expect fun rememberDeveloperInfo(): DeveloperInfoSnapshot

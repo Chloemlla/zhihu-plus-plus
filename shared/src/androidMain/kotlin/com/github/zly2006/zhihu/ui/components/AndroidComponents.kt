@@ -35,29 +35,14 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.net.toUri
-import com.github.zly2006.zhihu.data.AccountData
-import com.github.zly2006.zhihu.data.SegmentInfoMeta
+import com.github.zly2006.zhihu.navigation.NavDestination
 import com.github.zly2006.zhihu.nlp.KeywordAnalyzerCore
+import com.github.zly2006.zhihu.nlp.KeywordWithWeight
 import com.github.zly2006.zhihu.platform.androidUserMessageSink
-import com.github.zly2006.zhihu.ui.articleHost
-import com.github.zly2006.zhihu.util.SegmentHighlightSpan
+import com.github.zly2006.zhihu.ui.AndroidArticleNavigationHandoff
 import com.github.zly2006.zhihu.util.clipboardManager
 import com.github.zly2006.zhihu.util.luoTianYiUrlLauncher
-import com.github.zly2006.zhihu.util.signFetchRequest
-import com.github.zly2006.zhihu.viewmodel.filter.AndroidContentFilterRuntime
-import com.github.zly2006.zhihu.viewmodel.filter.BlockedKeyword
-import com.github.zly2006.zhihu.viewmodel.filter.KeywordType
-import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
-import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
-import io.ktor.client.call.body
-import io.ktor.client.request.delete
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
+import com.github.zly2006.zhihu.viewmodel.filter.androidKeywordWeightExtractor
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableImageState
 import me.saket.telephoto.zoomable.rememberZoomableState
@@ -123,134 +108,43 @@ class OpenImageDialog(
     }
 }
 
+actual suspend fun extractFeedKeywords(
+    title: String,
+    excerpt: String?,
+): List<KeywordWithWeight> = KeywordAnalyzerCore.extractFromFeedWithWeight(
+    title = title,
+    excerpt = excerpt,
+    content = null,
+    topN = 10,
+    extractor = androidKeywordWeightExtractor,
+)
+
 actual val feedKeywordExtractionAvailable: Boolean = true
 
 @Composable
-actual fun rememberSegmentedTextRuntime(): SegmentedTextRuntime {
+actual fun rememberShareActionExecutor(): ShareActionExecutor {
     val context = LocalContext.current
     return remember(context) {
-        SegmentedTextRuntime(
-            toggleSegmentLike = { highlight ->
-                toggleSegmentLike(context, highlight)
-            },
-        )
-    }
-}
-
-private suspend fun toggleSegmentLike(
-    context: android.content.Context,
-    highlight: SegmentHighlightSpan,
-): SegmentInfoMeta {
-    val contentId = highlight.contentId ?: return highlight.meta
-    val targetType = highlight.contentType ?: return highlight.meta
-    val url = "https://www.zhihu.com/api/v4/reaction/${targetType}s/$contentId/segment_reaction"
-
-    return if (highlight.meta.isLike) {
-        val body = buildSegmentUnlikeBody(highlight)
-        AccountData.httpClient(context).delete(url) {
-            signFetchRequest()
-            contentType(ContentType.Application.Json)
-            setBody(body)
-        }
-        updateSegmentMetaAfterUnlike(highlight)
-    } else {
-        val body = buildSegmentLikeBody(highlight)
-        val response = AccountData
-            .httpClient(context)
-            .post(url) {
-                signFetchRequest()
-                contentType(ContentType.Application.Json)
-                setBody(body)
-            }.let { response ->
-                if (response.status == HttpStatusCode.NoContent) {
-                    null
+        object : ShareActionExecutor {
+            override fun invoke(action: ShareAction, content: NavDestination, shareText: String) {
+                if (action == ShareAction.CopyLink) {
+                    AndroidArticleNavigationHandoff.markClipboardDestination(content)
+                    context.clipboardManager.setPrimaryClip(ClipData.newPlainText("Link", shareText))
+                    androidUserMessageSink(context).showShortMessage("已复制链接")
                 } else {
-                    response.body<JsonElement>() as? JsonObject
+                    val shareIntent = Intent().apply {
+                        this.action = Intent.ACTION_SEND
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, shareText)
+                        if (action == ShareAction.DirectShare) {
+                            putExtra(Intent.EXTRA_TITLE, getShareTitle(content))
+                        }
+                    }
+                    context.startActivity(
+                        Intent.createChooser(shareIntent, "分享到").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
                 }
             }
-        updateSegmentMetaAfterLike(highlight, response)
-    }
-}
-
-@Composable
-actual fun rememberShareDialogRuntime(): ShareDialogRuntime {
-    val context = LocalContext.current
-    return remember(context) {
-        ShareDialogRuntime(
-            share = { _, shareText ->
-                val shareIntent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, shareText)
-                }
-                val chooserIntent = Intent.createChooser(shareIntent, "分享到")
-                chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(chooserIntent)
-            },
-            directShare = { content, shareText ->
-                val shareIntent = Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, shareText)
-                    putExtra(Intent.EXTRA_TITLE, getShareTitle(content))
-                }
-                val chooserIntent = Intent.createChooser(shareIntent, "分享到")
-                chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context.startActivity(chooserIntent)
-            },
-            copyLink = { content, shareText ->
-                context.articleHost()?.clipboardDestination = content
-                context.clipboardManager.setPrimaryClip(ClipData.newPlainText("Link", shareText))
-                androidUserMessageSink(context).showShortMessage("已复制链接")
-            },
-        )
-    }
-}
-
-@Composable
-actual fun rememberBlockByKeywordsRuntime(): BlockByKeywordsRuntime {
-    val context = LocalContext.current
-    val database = remember(context) { getContentFilterDatabase(context) }
-    return remember(database) {
-        BlockByKeywordsRuntime(
-            extractKeywords = { title, excerpt ->
-                KeywordAnalyzerCore.extractFromFeedWithWeight(
-                    title = title,
-                    excerpt = excerpt,
-                    content = null,
-                    topN = 10,
-                    extractor = AndroidContentFilterRuntime.keywordWeightExtractor,
-                )
-            },
-            addNlpPhrase = { phrase ->
-                database.blockedKeywordDao().insertKeyword(
-                    BlockedKeyword(
-                        keyword = phrase.trim(),
-                        keywordType = KeywordType.NLP_SEMANTIC.name,
-                    ),
-                )
-            },
-        )
-    }
-}
-
-@Composable
-actual fun rememberFeedBlockActions(): FeedBlockActions {
-    val env = rememberPaginationEnvironment(allowGuestAccess = false)
-    return remember(env) {
-        FeedBlockActions(
-            handleBlockUser = { viewModel, feedItem, onShowDialog ->
-                viewModel.handleBlockUser(env, feedItem, onShowDialog)
-            },
-            handleBlockQuestionAuthor = { viewModel, feedItem, onShowDialog ->
-                viewModel.handleBlockQuestionAuthor(env, feedItem, onShowDialog)
-            },
-            handleBlockTopic = { viewModel, topicId, topicName ->
-                viewModel.handleBlockTopic(env, topicId, topicName)
-            },
-            handleBlockByKeywords = { viewModel, feedItem, onShowDialog ->
-                viewModel.handleBlockByKeywords(env, feedItem, onShowDialog)
-            },
-        )
+        }
     }
 }

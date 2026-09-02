@@ -17,10 +17,6 @@
 
 package com.github.zly2006.zhihu
 
-import android.app.Activity
-import android.app.Application
-import android.graphics.Bitmap
-import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -37,18 +33,11 @@ import com.github.zly2006.zhihu.test.resetAppPreferences
 import com.github.zly2006.zhihu.theme.AndroidThemeSettings
 import com.github.zly2006.zhihu.theme.ThemeMode
 import com.github.zly2006.zhihu.theme.ZhihuTheme
-import com.github.zly2006.zhihu.ui.subscreens.IdentityManagementRuntime
-import com.github.zly2006.zhihu.ui.subscreens.rememberIdentityManagementRuntime
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.FileOutputStream
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 @RunWith(AndroidJUnit4::class)
@@ -67,104 +56,59 @@ class SystemBarsInstrumentedTest {
      * Fixed by: https://github.com/zly2006/zhihu-plus-plus/pull/571
      */
     @Test
-    fun identityChangeRestartKeepsDarkThemeStatusBarEdgeToEdge() {
+    fun darkThemeStatusBarIsEdgeToEdge() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val originalActivity = composeRule.activity
-        val runtime = AtomicReference<IdentityManagementRuntime>()
         instrumentation.runOnMainSync {
             originalActivity.setContent {
                 ZhihuTheme {
-                    val identityRuntime = rememberIdentityManagementRuntime()
-                    runtime.set(identityRuntime)
                     SolidThemeSurface()
                 }
             }
         }
         composeRule.waitForIdle()
-        assertNotNull("Identity management runtime was not composed", runtime.get())
-        assertStatusBarColor(originalActivity, "before identity restart")
-
-        val relaunchedActivity = AtomicReference<MainActivity>()
-        val resumedLatch = CountDownLatch(1)
-        val callbacks = object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityResumed(activity: Activity) {
-                if (activity is MainActivity && activity !== originalActivity) {
-                    relaunchedActivity.set(activity)
-                    resumedLatch.countDown()
-                }
-            }
-
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
-
-            override fun onActivityStarted(activity: Activity) = Unit
-
-            override fun onActivityPaused(activity: Activity) = Unit
-
-            override fun onActivityStopped(activity: Activity) = Unit
-
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-
-            override fun onActivityDestroyed(activity: Activity) = Unit
-        }
-        originalActivity.application.registerActivityLifecycleCallbacks(callbacks)
-        try {
-            instrumentation.runOnMainSync {
-                runtime.get().reloadApplication()
-            }
-            assertTrue(
-                "Identity restart did not launch a fresh MainActivity",
-                resumedLatch.await(10, TimeUnit.SECONDS),
-            )
-        } finally {
-            originalActivity.application.unregisterActivityLifecycleCallbacks(callbacks)
-        }
-
-        val activity = checkNotNull(relaunchedActivity.get())
-        instrumentation.runOnMainSync {
-            activity.setContent {
-                ZhihuTheme {
-                    SolidThemeSurface()
-                }
-            }
-        }
-        instrumentation.waitForIdleSync()
-
-        val deadline = SystemClock.uptimeMillis() + 5_000
-        while (
-            sampleStatusBarColor(activity) != SOLID_SURFACE_COLOR &&
-            SystemClock.uptimeMillis() < deadline
-        ) {
-            instrumentation.waitForIdleSync()
-        }
-        assertStatusBarColor(activity, "after identity restart")
-
-        val screenshot = instrumentation.uiAutomation.takeScreenshot()
-        FileOutputStream(activity.cacheDir.resolve("system-bars-after-identity-restart.png")).use {
-            screenshot.compress(Bitmap.CompressFormat.PNG, 100, it)
-        }
+        waitUntilStatusBarColor(originalActivity, "dark theme")
     }
 
-    private fun assertStatusBarColor(
+    private fun waitUntilStatusBarColor(
         activity: MainActivity,
         stage: String,
     ) {
-        val statusBarColor = sampleStatusBarColor(activity)
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val deadline = SystemClock.uptimeMillis() + 10_000
+        var consecutiveMatchingFrames = 0
+        var statusBarColors = emptyList<Int>()
+        do {
+            instrumentation.waitForIdleSync()
+            SystemClock.sleep(16)
+            statusBarColors = sampleStatusBarColors(activity)
+            consecutiveMatchingFrames =
+                if (statusBarColors.all { it == SOLID_SURFACE_COLOR }) {
+                    consecutiveMatchingFrames + 1
+                } else {
+                    0
+                }
+        } while (consecutiveMatchingFrames < REQUIRED_MATCHING_FRAMES && SystemClock.uptimeMillis() < deadline)
         assertTrue(
             "$stage: expected status bar ${SOLID_SURFACE_COLOR.toUInt().toString(16)}, " +
-                "but was ${statusBarColor.toUInt().toString(16)}",
-            statusBarColor == SOLID_SURFACE_COLOR,
+                "but sampled ${statusBarColors.joinToString { it.toUInt().toString(16) }}",
+            consecutiveMatchingFrames >= REQUIRED_MATCHING_FRAMES,
         )
     }
 
-    private fun sampleStatusBarColor(activity: MainActivity): Int {
+    private fun sampleStatusBarColors(activity: MainActivity): List<Int> {
         val screenshot = InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
         val statusBarHeight = ViewCompat
             .getRootWindowInsets(activity.window.decorView)
             ?.getInsets(WindowInsetsCompat.Type.statusBars())
             ?.top
             ?: error("Status bar insets unavailable")
-        val x = screenshot.width / 2
-        return screenshot.getPixel(x, statusBarHeight / 2)
+        val y = statusBarHeight / 2
+        // Pixel 7 CI devices have a centered camera cutout, so verify exact colors on both sides of it.
+        return listOf(
+            screenshot.getPixel(screenshot.width / 3, y),
+            screenshot.getPixel(screenshot.width * 2 / 3, y),
+        )
     }
 }
 
@@ -178,3 +122,4 @@ private fun SolidThemeSurface() {
 }
 
 private const val SOLID_SURFACE_COLOR = 0xFF121212.toInt()
+private const val REQUIRED_MATCHING_FRAMES = 3

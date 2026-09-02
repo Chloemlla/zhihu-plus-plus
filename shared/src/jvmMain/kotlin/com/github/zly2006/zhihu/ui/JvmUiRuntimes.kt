@@ -16,44 +16,35 @@
  */
 
 package com.github.zly2006.zhihu.ui
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.em
-import com.github.zly2006.zhihu.data.FeedDisplayItem
-import com.github.zly2006.zhihu.data.RecommendationMode
-import com.github.zly2006.zhihu.desktop.DesktopAccountStore
-import com.github.zly2006.zhihu.desktop.DesktopLoginRequests
-import com.github.zly2006.zhihu.desktop.desktopZhihuDataFile
 import com.github.zly2006.zhihu.desktop.openDesktopExternalUrl
-import com.github.zly2006.zhihu.markdown.RenderMarkdown
 import com.github.zly2006.zhihu.navigation.Article
-import com.github.zly2006.zhihu.navigation.TopLevelDestination
 import com.github.zly2006.zhihu.notification.NotificationSettingsStore
 import com.github.zly2006.zhihu.platform.UserMessageSink
-import com.github.zly2006.zhihu.platform.rememberSettingsStore
+import com.github.zly2006.zhihu.platform.platformName
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
-import com.github.zly2006.zhihu.ui.subscreens.DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY
-import com.github.zly2006.zhihu.ui.subscreens.SystemUpdateState
-import com.github.zly2006.zhihu.ui.subscreens.desktopSystemUpdateState
+import com.github.zly2006.zhihu.ui.subscreens.desktopVersionName
 import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.viewmodel.DesktopPaginationEnvironment
 import com.github.zly2006.zhihu.viewmodel.filter.desktopContentFilterDatabaseFile
 import com.github.zly2006.zhihu.viewmodel.filter.encodeBlocklistBackup
 import com.github.zly2006.zhihu.viewmodel.filter.getContentFilterDatabase
 import com.github.zly2006.zhihu.viewmodel.filter.importBlocklistBackupFromJsonText
-import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -67,23 +58,27 @@ import javax.swing.filechooser.FileNameExtensionFilter
 actual fun rememberArticleTtsState(): TtsState = DesktopArticleSpeechController.currentTtsState
 
 @Composable
-actual fun rememberArticleSpeechToggler(): (title: String, content: String) -> Unit {
+actual fun rememberArticleSpeechToggler(): ArticleSpeechToggler {
     val userMessages = rememberUserMessageSink()
     val coroutineScope = rememberCoroutineScope()
     return remember(userMessages, coroutineScope) {
-        { title, content ->
-            DesktopArticleSpeechController.toggleSpeech(title, content, coroutineScope, userMessages)
+        object : ArticleSpeechToggler {
+            override fun invoke(title: String, content: String) {
+                DesktopArticleSpeechController.toggleSpeech(title, content, coroutineScope, userMessages)
+            }
         }
     }
 }
 
 @Composable
-actual fun rememberArticleBrowserOpener(): (Article) -> Unit {
+actual fun rememberArticleBrowserOpener(): ArticleBrowserOpener {
     val userMessages = rememberUserMessageSink()
     return remember(userMessages) {
-        { article ->
-            if (openDesktopExternalUrl(articleWebUrl(article))) {
-                userMessages.showMessage("已发送到浏览器")
+        object : ArticleBrowserOpener {
+            override fun invoke(article: Article) {
+                if (openDesktopExternalUrl(articleWebUrl(article))) {
+                    userMessages.showMessage("已发送到浏览器")
+                }
             }
         }
     }
@@ -227,95 +222,39 @@ private fun desktopProjectRoots(): List<File> =
         .toList()
 
 @Composable
-actual fun rememberHomeAccountState(): HomeAccountState {
-    val accountStore = remember { DesktopAccountStore() }
-    val account = accountStore.load()
-    return HomeAccountState(
-        isLoggedIn = account.login,
-        avatarUrl = account.profile?.avatarUrl,
-    )
-}
-
-@Composable
-actual fun rememberHomeUpdateAnnouncement(): HomeUpdateAnnouncement? {
-    val updateState by desktopSystemUpdateState.collectAsState()
-    return (updateState as? SystemUpdateState.UpdateAvailable)?.let {
-        HomeUpdateAnnouncement(
-            version = it.version,
-            isNightly = it.isNightly,
-        )
-    }
-}
-
-@Composable
-actual fun rememberHomeFeedStartupCache(recommendationMode: RecommendationMode): HomeFeedStartupCache {
-    val startupCacheFile = remember(recommendationMode) {
-        desktopZhihuDataFile(homeFeedStartupCacheFileName(recommendationMode))
-    }
-    return remember(startupCacheFile) {
-        HomeFeedStartupCache(
-            readHomeFeedStartupCache = {
-                withContext(Dispatchers.IO) {
-                    if (startupCacheFile.exists()) {
-                        decodeHomeFeedStartupSnapshot(startupCacheFile.readText())
-                    } else {
-                        emptyList()
-                    }
-                }
-            },
-            writeHomeFeedStartupCache = { items: List<FeedDisplayItem> ->
-                withContext(Dispatchers.IO) {
-                    val serialized = encodeHomeFeedStartupSnapshot(items)
-                    if (serialized != null) {
-                        runCatching {
-                            startupCacheFile.parentFile?.mkdirs()
-                            startupCacheFile.writeText(serialized)
-                        }
-                    }
-                }
-            },
-        )
-    }
-}
-
-@Composable
-actual fun rememberHomeInstalledAtLeastThreeHours(): Boolean = false
-
-@Composable
 actual fun rememberHomeIsDebuggable(): Boolean = true
-
-@Composable
-actual fun rememberHomeLoginRequester(): () -> Unit = remember {
-    { DesktopLoginRequests.requestLogin() }
-}
 
 @Composable
 actual fun rememberBlocklistRuleImporter(
     userMessages: UserMessageSink,
-): (((String) -> Unit) -> Unit) {
+    onImported: (String) -> Unit,
+): BlocklistRuleImporter {
     val database = remember {
         val databaseFile = desktopContentFilterDatabaseFile()
         databaseFile.parentFile?.mkdirs()
         getContentFilterDatabase(databaseFile)
     }
     val coroutineScope = rememberCoroutineScope()
-    return remember(database, userMessages) {
-        { onImported ->
-            val selectedFile = chooseBlocklistImportFile()
-            if (selectedFile != null) {
-                coroutineScope.launch {
-                    try {
-                        val summary = importBlocklistBackupFromJsonText(
-                            keywordDao = database.blockedKeywordDao(),
-                            userDao = database.blockedUserDao(),
-                            questionAuthorDao = database.blockedQuestionAuthorDao(),
-                            topicDao = database.blockedTopicDao(),
-                            text = selectedFile.readText(),
-                        )
-                        onImported(summary)
-                    } catch (e: Exception) {
-                        Log.e("BlocklistSettings", "Failed to import blocklist", e)
-                        userMessages.showShortMessage("导入失败: ${e.message}")
+    val currentOnImported by rememberUpdatedState(onImported)
+    return remember(database, userMessages, coroutineScope) {
+        object : BlocklistRuleImporter {
+            override fun invoke() {
+                val selectedFile = chooseBlocklistImportFile()
+                if (selectedFile != null) {
+                    coroutineScope.launch {
+                        try {
+                            val summary = importBlocklistBackupFromJsonText(
+                                keywordDao = database.blockedKeywordDao(),
+                                userDao = database.blockedUserDao(),
+                                questionAuthorDao = database.blockedQuestionAuthorDao(),
+                                topicDao = database.blockedTopicDao(),
+                                text = selectedFile.readText(),
+                            )
+                            currentOnImported(summary)
+                        } catch (e: Exception) {
+                            Log.e("BlocklistSettings", "Failed to import blocklist", e)
+                            userMessages.showShortMessage("导入失败: ${e.message}")
+                        }
                     }
                 }
             }
@@ -324,24 +263,26 @@ actual fun rememberBlocklistRuleImporter(
 }
 
 @Composable
-actual fun rememberBlocklistRuleExporter(): suspend () -> String {
+actual fun rememberBlocklistRuleExporter(): BlocklistRuleExporter {
     val database = remember {
         val databaseFile = desktopContentFilterDatabaseFile()
         databaseFile.parentFile?.mkdirs()
         getContentFilterDatabase(databaseFile)
     }
     return remember(database) {
-        suspend {
-            val file = File(desktopContentFilterDatabaseFile().parentFile, "zhihupp_blocklist.json")
-            file.writeText(
-                encodeBlocklistBackup(
-                    keywordDao = database.blockedKeywordDao(),
-                    userDao = database.blockedUserDao(),
-                    questionAuthorDao = database.blockedQuestionAuthorDao(),
-                    topicDao = database.blockedTopicDao(),
-                ),
-            )
-            "已导出到 ${file.absolutePath}"
+        object : BlocklistRuleExporter {
+            override suspend fun invoke(): String {
+                val file = File(desktopContentFilterDatabaseFile().parentFile, "zhihupp_blocklist.json")
+                file.writeText(
+                    encodeBlocklistBackup(
+                        keywordDao = database.blockedKeywordDao(),
+                        userDao = database.blockedUserDao(),
+                        questionAuthorDao = database.blockedQuestionAuthorDao(),
+                        topicDao = database.blockedTopicDao(),
+                    ),
+                )
+                return "已导出到 ${file.absolutePath}"
+            }
         }
     }
 }
@@ -360,88 +301,10 @@ private fun chooseBlocklistImportFile(): File? {
 }
 
 @Composable
-actual fun rememberAccountSettingsAccountState(): androidx.compose.runtime.State<AccountSettingsAccountState> =
-    DesktopAccountSettingsState.accountState
+actual fun rememberAppVersionInfo(): String = desktopVersionName()
 
 @Composable
-actual fun rememberAccountProfileRefresher(): suspend () -> Unit = remember {
-    {
-        DesktopAccountSettingsState.refreshProfile()
-    }
-}
-
-@Composable
-actual fun rememberAccountLoginRequester(): () -> Unit = remember {
-    {
-        DesktopLoginRequests.requestLogin()
-        DesktopAccountSettingsState.reload()
-    }
-}
-
-@Composable
-actual fun rememberAccountQrLoginRequester(): () -> Unit = rememberAccountLoginRequester()
-
-@Composable
-actual fun rememberAccountLogoutAction(): () -> Unit = remember {
-    {
-        DesktopAccountSettingsState.clear()
-    }
-}
-
-@Composable
-actual fun rememberAppVersionInfo(): String = "desktop"
-
-@Composable
-actual fun rememberMainTabSelector(): (TopLevelDestination) -> Unit = remember {
-    { _: TopLevelDestination -> }
-}
-
-private object DesktopAccountSettingsState {
-    private val store = DesktopAccountStore()
-    val accountState = mutableStateOf(store.load().toAccountSettingsAccountState())
-
-    suspend fun refreshProfile() {
-        val account = store.load()
-        val refreshed = store.refreshAndSaveProfile()
-        accountState.value = if (refreshed != null) {
-            refreshed.toAccountSettingsAccountState()
-        } else {
-            account.toAccountSettingsAccountState()
-        }
-    }
-
-    fun reload() {
-        accountState.value = store.load().toAccountSettingsAccountState()
-    }
-
-    fun clear() {
-        homeFeedStartupCacheFileNames().forEach { fileName ->
-            desktopZhihuDataFile(fileName).delete()
-        }
-        store.clear()
-        accountState.value = AccountSettingsAccountState()
-    }
-}
-
-private fun com.github.zly2006.zhihu.account.ZhihuAccountSession.toAccountSettingsAccountState(): AccountSettingsAccountState =
-    AccountSettingsAccountState(
-        login = login,
-        username = username,
-        avatarUrl = profile?.avatarUrl,
-        id = profile?.id ?: "",
-        urlToken = profile?.urlToken,
-    )
-
-@Composable
-actual fun rememberArticleHost(): ArticleHost? = null
-
-@Composable
-actual fun ArticlePreviewPreloadEffect(
-    cached: com.github.zly2006.zhihu.viewmodel.ArticleViewModel.CachedAnswerContent?,
-    isNext: Boolean,
-    title: String,
-    onImageLoadFailed: () -> Unit,
-) = Unit
+actual fun consumePendingCommentId(content: com.github.zly2006.zhihu.navigation.NavDestination): String? = null
 
 @Composable
 actual fun ArticleWebViewContent(
@@ -454,18 +317,7 @@ actual fun ArticleWebViewContent(
     onRememberedScrollYSyncChange: (Boolean) -> Unit,
     onImageLoadFailed: () -> Unit,
     onDoubleTap: () -> Unit,
-) {
-    RenderMarkdown(
-        html = html,
-        modifier = Modifier,
-        selectable = true,
-        enableScroll = false,
-        header = {},
-        footer = {},
-        useTiqianRenderer = rememberSettingsStore()
-            .getBoolean(DUO3_TIQIAN_MARKDOWN_PREFERENCE_KEY, false),
-    )
-}
+): Unit = error("$platformName 暂不支持文章 WebView 渲染")
 
 actual fun Modifier.articleMarkdownSelectionWorkaround(): Modifier = this
 
@@ -473,38 +325,26 @@ actual fun Modifier.articleMarkdownSelectionWorkaround(): Modifier = this
  * 桌面端不支持 WebView
  */
 @Composable
-actual fun ZhihuHtmlWebViewContent(html: String) = Unit
+actual fun ZhihuHtmlWebViewContent(html: String): Unit = error("$platformName 暂不支持 HTML WebView 渲染")
 
-actual fun supportsZhihuHtmlWebView(): Boolean = false
+actual val isLegacyWebViewSupported: Boolean = false
 
 @Composable
 actual fun rememberNotificationEnvironment(
     settingsStore: NotificationSettingsStore,
-): com.github.zly2006.zhihu.viewmodel.NotificationEnvironment {
-    val userMessages = rememberUserMessageSink()
-    val store = remember { DesktopAccountStore() }
-    return remember(store, settingsStore, userMessages) {
-        DesktopPaginationEnvironment(
-            store = store,
-            notificationSettingsStore = settingsStore,
-            showFetchFailureMessage = userMessages::showMessage,
-        )
-    }
-}
-
-@Composable
-actual fun rememberZhihuHttpClient(): HttpClient {
-    val store = remember { DesktopAccountStore() }
-    return store.httpClient()
+): com.github.zly2006.zhihu.viewmodel.NotificationEnvironment = remember(settingsStore) {
+    DesktopPaginationEnvironment(
+        notificationSettingsStore = settingsStore,
+    )
 }
 
 @Composable
 actual fun QuestionDetailWebViewContent(
     questionId: Long,
     html: String,
-) = Unit // TODO: 桌面端问题 WebView
-
-actual fun supportsQuestionDetailWebView(): Boolean = false
+) {
+    error("$platformName 暂不支持问题详情 WebView 渲染")
+}
 
 actual fun Modifier.questionSelectionWorkaround(): Modifier = this
 

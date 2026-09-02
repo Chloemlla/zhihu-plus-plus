@@ -16,6 +16,7 @@
  */
 
 package com.github.zly2006.zhihu.ui.subscreens
+
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -32,71 +33,52 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.github.zly2006.zhihu.data.AccountData
-import com.github.zly2006.zhihu.data.asApiEnvironment
-import com.github.zly2006.zhihu.network.ClashPartnerCompat
 import com.github.zly2006.zhihu.platform.androidUserMessageSink
 import com.github.zly2006.zhihu.platform.rememberIsLiteVariant
+import com.github.zly2006.zhihu.reading.AndroidReadingPlayerBridge
+import com.github.zly2006.zhihu.ui.rememberArticleTtsState
 import com.github.zly2006.zhihu.updater.UpdateManager
 import com.github.zly2006.zhihu.updater.UpdateManager.UpdateState
+import com.github.zly2006.zhihu.util.ContinuousUsageReminderManager
 import com.github.zly2006.zhihu.util.PowerSaveModeCompat
-import com.github.zly2006.zhihu.util.ZhihuCredentialRefresher
 import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.util.withContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
 
 @Composable
-actual fun rememberDeveloperSettingsRuntime(): DeveloperSettingsRuntime {
+actual fun rememberDeveloperInfo(): DeveloperInfoSnapshot {
     val context = LocalContext.current
-    val dataState by AccountData.asState()
-    return remember(context, dataState) {
-        DeveloperSettingsRuntime(
-            cookies = { dataState.cookies },
-            networkStatus = { context.networkStatusText() },
-            powerSaveModeText = {
-                when (PowerSaveModeCompat.getPowerSaveMode(context)) {
-                    PowerSaveModeCompat.POWER_SAVE -> "省电模式：已开启"
-                    PowerSaveModeCompat.HUAWEI_POWER_SAVE -> "省电模式：华为傻逼模式已开启"
-                    else -> null
-                }
-            },
-            runtimeInfo = { (context as? DeveloperRuntimeInfoProvider)?.developerRuntimeInfo ?: DeveloperRuntimeInfo() },
-            verifyLogin = { cookies ->
-                AccountData.verifyLogin(context, cookies)
-            },
-            refreshToken = {
-                val httpClient = AccountData.httpClient(context)
-                ZhihuCredentialRefresher.refreshZhihuToken(
-                    ZhihuCredentialRefresher.fetchRefreshToken(httpClient),
-                    httpClient,
-                )
-            },
-            saveCookies = { cookies ->
-                AccountData.saveData(
-                    context,
-                    AccountData.data.copy(
-                        cookies = cookies.toMutableMap(),
-                        login = true,
-                    ),
-                )
-            },
-            signedGet = { url ->
-                context.asApiEnvironment().fetchJson(url, "").toString()
-            },
-        )
-    }
+    val ttsState = rememberArticleTtsState()
+    return produceState(initialValue = DeveloperInfoSnapshot(), context, ttsState) {
+        while (true) {
+            val readingState = AndroidReadingPlayerBridge.state.value
+            value = DeveloperInfoSnapshot(
+                networkStatus = context.networkStatusText(),
+                powerSaveModeText =
+                    when (PowerSaveModeCompat.getPowerSaveMode(context)) {
+                        PowerSaveModeCompat.POWER_SAVE -> "省电模式：已开启"
+                        PowerSaveModeCompat.HUAWEI_POWER_SAVE -> "省电模式：华为傻逼模式已开启"
+                        else -> null
+                    },
+                continuousUsageDurationMs = ContinuousUsageReminderManager.currentElapsedForegroundMs(),
+                ttsState = ttsState,
+                currentTtsEngineLabel = readingState.engineLabel.ifBlank { "按需初始化" },
+                availableTtsEngineLabels = readingState.availableEngineLabels,
+            )
+            delay(1_000L)
+        }
+    }.value
 }
 
 private fun Context.networkStatusText(): String {
@@ -117,6 +99,8 @@ private fun Context.networkStatusText(): String {
         }
     }
 }
+
+actual val isWebViewCustomFontSupported: Boolean = true
 
 @Composable
 actual fun WebViewCustomFontSettings(
@@ -172,78 +156,74 @@ actual fun WebViewCustomFontSettings(
 }
 
 @Composable
-actual fun rememberClashPartnerSettingsRuntime(): ClashPartnerSettingsRuntime {
-    val context = LocalContext.current
-    var autoAdapt by remember {
-        mutableStateOf(ClashPartnerCompat.isAutoAdaptEnabled(context))
+actual fun rememberSystemUpdateState(): StateFlow<SystemUpdateState> {
+    val scope = rememberCoroutineScope()
+    return remember(scope) {
+        UpdateManager.updateState.map { it.toSystemUpdateState() }.stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            UpdateManager.updateState.value.toSystemUpdateState(),
+        )
     }
-    var statusLabel by remember {
-        mutableStateOf(ClashPartnerCompat.statusLabel(context))
-    }
-    DisposableEffect(context) {
-        ClashPartnerCompat.start(context)
-        val listener: (ClashPartnerCompat.Status) -> Unit = {
-            statusLabel = ClashPartnerCompat.statusLabel(context)
-        }
-        ClashPartnerCompat.addListener(listener)
-        onDispose { ClashPartnerCompat.removeListener(listener) }
-    }
-    return ClashPartnerSettingsRuntime(
-        supported = true,
-        isAutoAdaptEnabled = autoAdapt,
-        setAutoAdaptEnabled = { enabled ->
-            autoAdapt = enabled
-            ClashPartnerCompat.setAutoAdaptEnabled(context, enabled)
-            statusLabel = ClashPartnerCompat.statusLabel(context)
-        },
-        statusLabel = statusLabel,
-        refresh = {
-            ClashPartnerCompat.refresh(context)
-            statusLabel = ClashPartnerCompat.statusLabel(context)
-        },
-    )
 }
 
 @Composable
-actual fun rememberSystemUpdateRuntime(): SystemUpdateRuntime {
+actual fun rememberSystemUpdateChecker(): SystemUpdateChecker {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    return remember(context, scope) {
-        SystemUpdateRuntime(
-            state = UpdateManager.updateState.map { it.toSystemUpdateState() }.stateIn(
-                scope,
-                SharingStarted.Eagerly,
-                UpdateManager.updateState.value.toSystemUpdateState(),
-            ),
-            autoCheckEnabled = { UpdateManager.isAutoCheckEnabled(context) },
-            setAutoCheckEnabled = { enabled ->
-                UpdateManager.setAutoCheckEnabled(context, enabled)
-                if (!enabled) {
-                    UpdateManager.updateState.value = UpdateState.NoUpdate
-                }
-            },
-            checkForUpdate = { UpdateManager.checkForUpdate(context) },
-            skipVersion = { version ->
+    return remember(context) {
+        object : SystemUpdateChecker {
+            override suspend fun check() = UpdateManager.checkForUpdate(context)
+        }
+    }
+}
+
+@Composable
+actual fun rememberSystemUpdateVersionSkipper(): SystemUpdateVersionSkipper {
+    val context = LocalContext.current
+    return remember(context) {
+        object : SystemUpdateVersionSkipper {
+            override fun skip(version: String) {
                 UpdateManager.skipVersion(context, version)
                 UpdateManager.updateState.value = UpdateState.Latest
-            },
-            resetToNoUpdate = {
-                UpdateManager.updateState.value = UpdateState.NoUpdate
-            },
-            downloadUpdate = { url -> UpdateManager.downloadUpdate(context, url) },
-            installDownloadedUpdate = {
+            }
+        }
+    }
+}
+
+@Composable
+actual fun rememberSystemUpdateDownloader(): SystemUpdateDownloader {
+    val context = LocalContext.current
+    return remember(context) {
+        object : SystemUpdateDownloader {
+            override suspend fun download(url: String) = UpdateManager.downloadUpdate(context, url)
+        }
+    }
+}
+
+@Composable
+actual fun rememberDownloadedSystemUpdateInstaller(): DownloadedSystemUpdateInstaller {
+    val context = LocalContext.current
+    return remember(context) {
+        object : DownloadedSystemUpdateInstaller {
+            override suspend fun install() {
                 val state = UpdateManager.updateState.value
                 if (state is UpdateState.Downloaded) {
                     UpdateManager.installUpdate(context, state.file)
                 }
-            },
-            setError = { message ->
-                UpdateManager.updateState.value = UpdateState.Error(message)
-            },
-            supportsApkInstall = true,
-        )
+            }
+        }
     }
 }
+
+actual fun resetSystemUpdateState() {
+    UpdateManager.updateState.value = UpdateState.NoUpdate
+}
+
+actual fun setSystemUpdateError(message: String) {
+    UpdateManager.updateState.value = UpdateState.Error(message)
+}
+
+actual val isApkUpdateInstallSupported: Boolean = true
 
 private fun UpdateState.toSystemUpdateState(): SystemUpdateState = when (this) {
     UpdateState.NoUpdate -> SystemUpdateState.NoUpdate
@@ -274,7 +254,3 @@ actual fun rememberOpenSourceLicensesLibraries(): Libs {
 
 @Composable
 actual fun rememberShowFullVariantLicenses(): Boolean = !rememberIsLiteVariant()
-
-@Composable
-actual fun rememberIdentityManagementRuntime(): IdentityManagementRuntime =
-    unsupportedIdentityManagementRuntime("Android 身份管理由系统设置页处理")

@@ -18,11 +18,14 @@
 package com.github.zly2006.zhihu.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import com.github.zly2006.zhihu.account.NativeAccountStore
+import com.github.zly2006.zhihu.account.ZhihuAccountStore
+import com.github.zly2006.zhihu.account.defaultNativeAccountStore
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.cinterop.BetaInteropApi
@@ -30,46 +33,37 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.launch
+import kotlinx.io.files.Path
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
 import platform.Foundation.dataWithBytes
 import kotlin.time.Clock
 
 @Composable
-actual fun rememberSystemUrlOpener(): (String) -> Unit = rememberExternalUrlOpener()
+actual fun rememberSystemUrlOpener(): SystemUrlOpener = rememberExternalUrlOpener()
 
 @Composable
-actual fun rememberZhihuWebUrlOpener(): (String) -> Unit = rememberExternalUrlOpener()
+actual fun rememberZhihuWebUrlOpener(): ZhihuWebUrlOpener = rememberExternalUrlOpener()
 
 @Composable
-actual fun rememberImagePreviewOpener(): (String) -> Unit = rememberExternalUrlOpener()
+actual fun rememberImagePreviewOpener(): ImagePreviewOpener = rememberExternalUrlOpener()
 
 @Composable
-actual fun rememberImageGalleryOpener(): (List<String>, Int) -> Unit {
-    val openExternalUrl = rememberExternalUrlOpener()
-    return remember(openExternalUrl) {
-        { urls, initialIndex ->
-            if (urls.isNotEmpty()) {
-                urls[initialIndex.coerceIn(0, urls.lastIndex)].let(openExternalUrl)
-            }
-        }
-    }
-}
-
-@Composable
-actual fun rememberImageSaver(): (String) -> Unit {
+actual fun rememberImageSaver(): ImageSaver {
     val scope = rememberCoroutineScope()
     val userMessages = rememberUserMessageSink()
-    val accountStore = remember { NativeAccountStore() }
+    val accountStore = defaultNativeAccountStore
     return remember(scope, userMessages, accountStore) {
-        { imageUrl ->
-            scope.launch {
-                runCatching {
-                    saveNativeImageToDownloads(accountStore, imageUrl)
-                }.onSuccess { filePath ->
-                    userMessages.showShortMessage("已保存图片: $filePath")
-                }.onFailure { error ->
-                    userMessages.showShortMessage("保存失败: ${error.message}")
+        object : ImageSaver {
+            override fun invoke(url: String) {
+                scope.launch {
+                    runCatching {
+                        saveNativeImageToDownloads(accountStore, url)
+                    }.onSuccess { filePath ->
+                        userMessages.showShortMessage("已保存图片: $filePath")
+                    }.onFailure { error ->
+                        userMessages.showShortMessage("保存失败: ${error.message}")
+                    }
                 }
             }
         }
@@ -77,15 +71,17 @@ actual fun rememberImageSaver(): (String) -> Unit {
 }
 
 @Composable
-actual fun rememberImageSharer(): (String) -> Unit {
+actual fun rememberImageSharer(): ImageSharer {
     val userMessages = rememberUserMessageSink()
     return remember(userMessages) {
-        { imageUrl ->
-            runCatching {
-                copyNativePlainText(imageUrl)
-                userMessages.showShortMessage("已复制图片链接")
-            }.onFailure { error ->
-                userMessages.showShortMessage("分享失败: ${error.message}")
+        object : ImageSharer {
+            override fun invoke(url: String) {
+                runCatching {
+                    copyNativePlainText(url)
+                    userMessages.showShortMessage("已复制图片链接")
+                }.onFailure { error ->
+                    userMessages.showShortMessage("分享失败: ${error.message}")
+                }
             }
         }
     }
@@ -93,10 +89,13 @@ actual fun rememberImageSharer(): (String) -> Unit {
 
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 private suspend fun saveNativeImageToDownloads(
-    accountStore: NativeAccountStore,
+    accountStore: ZhihuAccountStore,
     imageUrl: String,
 ): String {
-    val imageBytes = accountStore.httpClient().get(imageUrl).body<ByteArray>()
+    val imageBytes = accountStore.client
+        .httpClient()
+        .get(imageUrl)
+        .body<ByteArray>()
     val extension = imageUrl
         .substringBefore('?')
         .substringAfterLast('/')
@@ -122,8 +121,10 @@ private suspend fun saveNativeImageToDownloads(
 }
 
 @Composable
-actual fun rememberPlainTextClipboard(): (label: String, text: String) -> Unit = remember {
-    { _, text -> copyNativePlainText(text) }
+actual fun rememberPlainTextClipboard(): PlainTextClipboard = remember {
+    object : PlainTextClipboard {
+        override fun invoke(label: String, text: String) = copyNativePlainText(text)
+    }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -143,5 +144,22 @@ actual fun PlatformPredictiveBackHandler(
 @Composable
 actual fun rememberSettingsStore(): SettingsStore = remember { nativeSettingsStore("settings.properties") }
 
+actual fun Modifier.exportTestTagsForUiAutomation(): Modifier = this
+
+@Composable
+actual fun rememberAppPrivateDirectory(): Path = remember { Path(nativeAppPrivateDirectoryPath()) }
+
 @Composable
 actual fun rememberIsLiteVariant(): Boolean = false
+
+actual val isJvm: Boolean = false
+
+actual val isNative: Boolean = true
+
+actual val isBlocklistNlpSupported: Boolean = false
+
+actual val isSentenceSimilaritySupported: Boolean = false
+
+actual val isArticleHtmlExportSupported: Boolean = false
+
+actual val isArticleImageExportSupported: Boolean = false

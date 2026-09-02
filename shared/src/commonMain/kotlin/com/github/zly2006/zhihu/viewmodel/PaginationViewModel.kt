@@ -24,8 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.zly2006.zhihu.aigc.AigcVoteClient
-import com.github.zly2006.zhihu.aigc.AigcVoteVoter
+import com.github.zly2006.zhihu.data.AigcVoteVoter
 import com.github.zly2006.zhihu.data.ContentDetailCache
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.Feed
@@ -33,15 +32,18 @@ import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.data.OnlineHistoryDeletePair
 import com.github.zly2006.zhihu.data.ZhihuJson.decodeJson
 import com.github.zly2006.zhihu.data.ZhihuPaging
+import com.github.zly2006.zhihu.data.executeZhihuAuthenticatedRequest
 import com.github.zly2006.zhihu.data.fetchZhihuAuthenticatedJson
 import com.github.zly2006.zhihu.data.fetchZhihuContentDetail
 import com.github.zly2006.zhihu.data.getOrFetchContentDetail
 import com.github.zly2006.zhihu.navigation.AnswerNavigator
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.NavDestination
+import com.github.zly2006.zhihu.platform.platformName
 import com.github.zly2006.zhihu.ui.ArticleAnswerSwitchState
 import com.github.zly2006.zhihu.ui.ArticleAnswerTransitionDirection
 import com.github.zly2006.zhihu.util.Log
+import com.github.zly2006.zhihu.util.ZhihuCredentialRefresher
 import com.github.zly2006.zhihu.util.signZhihuFetchRequest
 import com.github.zly2006.zhihu.viewmodel.ArticleViewModel.CachedAnswerContent
 import com.github.zly2006.zhihu.viewmodel.local.LocalRecommendationEngine
@@ -51,6 +53,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpMethod
 import io.ktor.http.URLProtocol
@@ -219,6 +222,8 @@ open class ArticleAnswerSwitchData :
     override fun promoteForNavigation(direction: ArticleAnswerTransitionDirection) = Unit
 }
 
+val sharedArticleAnswerSwitchState = ArticleAnswerSwitchData()
+
 interface PreparedArticleExportContent
 
 interface ArticleImageExportRenderer {
@@ -254,6 +259,21 @@ interface ZhihuApiEnvironment {
             }
             signZhihuFetchRequest(cookies)
         }
+    }
+
+    suspend fun signedGetText(url: String): String = withAuthenticatedClient { client, cookies ->
+        executeZhihuAuthenticatedRequest(client, url) {
+            method = HttpMethod.Get
+            signZhihuFetchRequest(cookies)
+        }.bodyAsText()
+    }
+
+    suspend fun refreshToken() {
+        val client = httpClient()
+        ZhihuCredentialRefresher.refreshZhihuToken(
+            ZhihuCredentialRefresher.fetchRefreshToken(client),
+            client,
+        )
     }
 
     suspend fun handleFetchFailure(
@@ -397,7 +417,13 @@ interface ContentOpenEnvironment {
 }
 
 interface AigcVoteEnvironment {
-    fun aigcVoteClient(): AigcVoteClient? = null
+    fun isAigcVoteEnabled(): Boolean = false
+
+    fun aigcVoteHttpClient(): HttpClient = error("AIGC 内容标记客户端不可用")
+
+    fun aigcVoteBaseUrl(): String = ""
+
+    fun aigcVoteClientId(): String = ""
 
     fun aigcVoteVoter(): AigcVoteVoter? = null
 }
@@ -421,11 +447,6 @@ interface ContentBlocklistEnvironment {
         userName: String,
         urlToken: String? = null,
         avatarUrl: String? = null,
-    ) = Unit
-
-    suspend fun addBlockedTopic(
-        topicId: String,
-        topicName: String,
     ) = Unit
 
     suspend fun removeBlockedUser(userId: String) = Unit
@@ -481,16 +502,13 @@ interface ArticleExportEnvironment {
         bitmap: Any,
     ) = Unit
 
-    fun articleImageExportRenderer(loadAssetText: (String) -> String): ArticleImageExportRenderer? = null
+    fun articleImageExportRenderer(): ArticleImageExportRenderer =
+        error("$platformName 暂不支持文章图片导出")
 }
 
 interface ArticleExportContentEnvironment :
     ArticleExportEnvironment,
     ZhihuApiEnvironment
-
-interface ArticleNavigationEnvironment {
-    fun articleAnswerSwitchState(): ArticleAnswerSwitchState? = null
-}
 
 interface ContentLoadEnvironment :
     ZhihuApiEnvironment,
@@ -504,8 +522,7 @@ interface ProfileLoadEnvironment :
 
 interface ArticleLoadEnvironment :
     ZhihuApiEnvironment,
-    ContentLoadEnvironment,
-    ArticleNavigationEnvironment
+    ContentLoadEnvironment
 
 interface PaginationEnvironment :
     ZhihuApiEnvironment,

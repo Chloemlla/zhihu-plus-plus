@@ -17,6 +17,7 @@
 
 package com.github.zly2006.zhihu.ui
 
+import com.github.zly2006.zhihu.data.Collection
 import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.viewmodel.collectionRandomPageOffsets
 import com.github.zly2006.zhihu.viewmodel.shouldReuseCollectionRandomSession
@@ -69,7 +70,7 @@ class CollectionBrowseSelectionTest {
         assertTrue(
             shouldRefreshCollectionDataOnActivation(
                 isActive = true,
-                useTestCollections = false,
+                useLocalCollections = false,
                 refreshOnNextActivation = true,
             ),
         )
@@ -80,7 +81,7 @@ class CollectionBrowseSelectionTest {
         assertFalse(
             shouldRefreshCollectionDataOnActivation(
                 isActive = true,
-                useTestCollections = false,
+                useLocalCollections = false,
                 refreshOnNextActivation = false,
             ),
         )
@@ -91,14 +92,14 @@ class CollectionBrowseSelectionTest {
         assertFalse(
             shouldRefreshCollectionDataOnActivation(
                 isActive = false,
-                useTestCollections = false,
+                useLocalCollections = false,
                 refreshOnNextActivation = true,
             ),
         )
         assertFalse(
             shouldRefreshCollectionDataOnActivation(
                 isActive = true,
-                useTestCollections = true,
+                useLocalCollections = true,
                 refreshOnNextActivation = true,
             ),
         )

@@ -198,13 +198,6 @@ enum class CommentImageMenuAction {
     Share,
 }
 
-data class CommentScreenTestOverrides(
-    val viewModel: BaseCommentViewModel? = null,
-    val onArchiveComment: ((CommentModel) -> Unit)? = null,
-    val onImageMenuAction: ((CommentImageMenuAction, String) -> Unit)? = null,
-    val commentEmojis: List<CommentEmoji>? = null,
-)
-
 @Composable
 fun SwipeToReplyContainer(
     modifier: Modifier = Modifier,
@@ -444,7 +437,6 @@ fun CommentScreen(
     commentInput: String,
     onCommentInputChange: (String) -> Unit,
     listState: LazyListState = rememberLazyListState(),
-    testOverrides: CommentScreenTestOverrides? = null,
     initialComment: DataHolder.Comment? = null,
     onInitialChildCommentResolved: (CommentModel, DataHolder.Comment) -> Unit = { _, _ -> },
 ) {
@@ -469,8 +461,7 @@ fun CommentScreen(
             ),
         )
     }
-    val availableCommentEmojis = rememberCommentEmojis()
-    val commentEmojis = testOverrides?.commentEmojis ?: availableCommentEmojis
+    val commentEmojis = rememberCommentEmojis()
     val emojiInlineContent = rememberCommentEmojiInlineContent(
         remember(commentEmojis) { commentEmojis.mapTo(mutableSetOf(), CommentEmoji::inlineKey) },
     )
@@ -489,7 +480,7 @@ fun CommentScreen(
     }
 
     // 根据内容类型选择合适的ViewModel
-    val viewModel: BaseCommentViewModel = testOverrides?.viewModel ?: when (resolvedContent) {
+    val viewModel: BaseCommentViewModel = when (resolvedContent) {
         is CommentHolder -> remember(viewModelKey) {
             // 子评论不进行状态保存
             ChildCommentViewModel(resolvedContent, initialComment)
@@ -725,7 +716,6 @@ fun CommentScreen(
                                             }
                                         },
                                         onChildCommentClick = onChildCommentClick,
-                                        onImageMenuAction = testOverrides?.onImageMenuAction,
                                         onDelete = if (allowDelete && commentItem.item.canDelete) {
                                             {
                                                 commentPendingDeletion = commentItem
@@ -769,7 +759,6 @@ fun CommentScreen(
                                                             }
                                                         },
                                                         onChildCommentClick = onChildCommentClick,
-                                                        onImageMenuAction = testOverrides?.onImageMenuAction,
                                                         onDelete = if (childComment.canDelete) {
                                                             {
                                                                 commentPendingDeletion = childCommentItem
@@ -917,11 +906,6 @@ fun CommentScreen(
                                     val commentItem = viewModel.createCommentItem(dto, article = rootContent)
                                     SwipeToReplyContainer(
                                         modifier = Modifier.testTag("comment_row_${dto.id}"),
-                                        onArchive = testOverrides?.onArchiveComment?.let { onArchive ->
-                                            {
-                                                onArchive(commentItem)
-                                            }
-                                        },
                                         onReply = {
                                             if (activeCommentItem == null) {
                                                 if (commentItem.clickTarget != null) {
@@ -1319,7 +1303,7 @@ private fun CommentItem(
                         dfsSimple(
                             node = stripped,
                             onNavigate = navigator.onNavigate,
-                            openExternalUrl = openExternalUrl,
+                            openExternalUrl = openExternalUrl::invoke,
                             componentUsed = emojisUsed,
                         )
                     }

@@ -101,7 +101,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fleeksoft.ksoup.Ksoup
 import com.github.zly2006.zhihu.data.DataHolder
 import com.github.zly2006.zhihu.data.decodeQuestionContentDetail
-import com.github.zly2006.zhihu.data.navDestination
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Question
 import com.github.zly2006.zhihu.navigation.Topic
@@ -118,11 +117,12 @@ import com.github.zly2006.zhihu.ui.components.ProgressIndicatorFooter
 import com.github.zly2006.zhihu.ui.components.ShareDialog
 import com.github.zly2006.zhihu.ui.components.getShareText
 import com.github.zly2006.zhihu.ui.components.handleShareAction
-import com.github.zly2006.zhihu.ui.components.rememberShareDialogRuntime
+import com.github.zly2006.zhihu.ui.components.rememberShareActionExecutor
 import com.github.zly2006.zhihu.viewmodel.ContentLoadEnvironment
 import com.github.zly2006.zhihu.viewmodel.addReadHistory
 import com.github.zly2006.zhihu.viewmodel.feed.QuestionFeedViewModel
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
+import com.github.zly2006.zhihu.viewmodel.sharedArticleAnswerSwitchState
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -173,7 +173,7 @@ fun QuestionScreen(
 ) {
     val readingPlayerOverlayPadding = LocalReadingPlayerOverlayPadding.current
     val settings = rememberSettingsStore()
-    val executeShareAction = rememberShareDialogRuntime()
+    val executeShareAction = rememberShareActionExecutor()
     val openZhihuWebUrl = rememberZhihuWebUrlOpener()
     val navigator = LocalNavigator.current
     val viewModel: QuestionFeedViewModel = viewModel(key = "question_${question.questionId}") {
@@ -185,7 +185,7 @@ fun QuestionScreen(
         items = viewModel.displayItems,
     )
     val paginationEnvironment = rememberPaginationEnvironment(allowGuestAccess = false)
-    val answerSwitchState = paginationEnvironment.articleAnswerSwitchState()
+    val answerSwitchState = sharedArticleAnswerSwitchState
     val listState = rememberLazyListState()
     var questionContent by remember(question.questionId) { mutableStateOf("") }
     var answerCount by remember(question.questionId) { mutableIntStateOf(0) }
@@ -329,10 +329,11 @@ fun QuestionScreen(
             ) { item ->
                 FeedCard(
                     item = item,
+                    readingQueueSourceId = answerReadingQueueSourceId,
                     modifier = Modifier.testTag("question_feed_item_${item.stableKey}"),
-                ) {
-                    answerSwitchState?.pendingNavigator = viewModel.createAnswerNavigatorFor(item, paginationEnvironment)
-                    navDestination?.let(navigator.onNavigate)
+                ) { _, destination ->
+                    answerSwitchState.pendingNavigator = viewModel.createAnswerNavigatorFor(item, paginationEnvironment)
+                    destination?.let(navigator.onNavigate)
                 }
             }
         }

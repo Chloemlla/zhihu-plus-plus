@@ -16,6 +16,7 @@
  */
 
 package com.github.zly2006.zhihu.theme
+
 import android.app.Activity
 import android.content.Context
 import android.os.Build
@@ -31,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.github.zly2006.zhihu.platform.androidSettingsStore
+import com.github.zly2006.zhihu.theme.ThemeMode
 
 object AndroidThemeSettings {
     fun initialize(context: Context) {

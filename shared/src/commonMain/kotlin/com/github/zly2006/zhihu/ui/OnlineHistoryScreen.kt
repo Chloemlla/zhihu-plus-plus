@@ -47,9 +47,12 @@ import com.github.zly2006.zhihu.navigation.History
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.platform.PlatformBackHandler
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.reading.RegisterReadingQueueSource
+import com.github.zly2006.zhihu.ui.TopLevelReselectAction
 import com.github.zly2006.zhihu.ui.components.FeedCard
 import com.github.zly2006.zhihu.ui.components.FeedPullToRefresh
 import com.github.zly2006.zhihu.ui.components.PaginatedList
+import com.github.zly2006.zhihu.ui.topLevelReselectAction
 import com.github.zly2006.zhihu.viewmodel.feed.OnlineHistoryViewModel
 import com.github.zly2006.zhihu.viewmodel.rememberPaginationEnvironment
 import kotlinx.coroutines.CancellationException
@@ -71,6 +74,13 @@ fun OnlineHistoryScreen(
 ) {
     val navigator = LocalNavigator.current
     val viewModel: OnlineHistoryViewModel = viewModel { OnlineHistoryViewModel() }
+    val readingQueueSourceId = "history:online"
+    if (isActive) {
+        RegisterReadingQueueSource(
+            sourceId = readingQueueSourceId,
+            items = viewModel.displayItems,
+        )
+    }
     val paginationEnvironment = rememberPaginationEnvironment(allowGuestAccess = false)
     val userMessages = rememberUserMessageSink()
     val coroutineScope = rememberCoroutineScope()
@@ -184,6 +194,7 @@ fun OnlineHistoryScreen(
             ) { item ->
                 FeedCard(
                     item,
+                    readingQueueSourceId = readingQueueSourceId.takeIf { isActive },
                     menuItems = { dismissMenu ->
                         DropdownMenuItem(
                             text = { Text("删除该条历史记录") },

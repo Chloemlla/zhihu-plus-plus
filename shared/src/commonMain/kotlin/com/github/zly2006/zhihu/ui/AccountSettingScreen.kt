@@ -40,6 +40,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ArrowOutward
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -49,7 +50,6 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwitchAccount
@@ -79,25 +79,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.github.zly2006.zhihu.account.rememberZhihuAccountStore
 import com.github.zly2006.zhihu.navigation.Account
 import com.github.zly2006.zhihu.navigation.Collections
 import com.github.zly2006.zhihu.navigation.LocalNavigator
 import com.github.zly2006.zhihu.navigation.Notification
 import com.github.zly2006.zhihu.navigation.OnlineHistory
 import com.github.zly2006.zhihu.navigation.Person
-import com.github.zly2006.zhihu.onboarding.OssNoticeCopy
-import com.github.zly2006.zhihu.onboarding.OssNoticeReopenBus
+import com.github.zly2006.zhihu.navigation.requestLoginNavigation
+import com.github.zly2006.zhihu.platform.platformBottomBarItemLimit
 import com.github.zly2006.zhihu.platform.rememberPlainTextClipboard
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import com.github.zly2006.zhihu.platform.rememberSystemUrlOpener
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
+import com.github.zly2006.zhihu.reading.isReadingPlayerSupported
 import com.github.zly2006.zhihu.ui.components.SettingItem
 import com.github.zly2006.zhihu.ui.components.SettingItemGroup
 import com.github.zly2006.zhihu.ui.subscreens.BOTTOM_BAR_ITEMS_PREFERENCE_KEY
 import com.github.zly2006.zhihu.ui.subscreens.SystemUpdateState
 import com.github.zly2006.zhihu.ui.subscreens.defaultBottomBarSelectionKeys
 import com.github.zly2006.zhihu.ui.subscreens.normalizeBottomBarSelection
-import com.github.zly2006.zhihu.ui.subscreens.rememberSystemUpdateRuntime
+import com.github.zly2006.zhihu.ui.subscreens.rememberSystemUpdateState
 import com.github.zly2006.zhihu.ui.subscreens.shouldShowAccountHistoryShortcut
 import com.github.zly2006.zhihu.util.Log
 import kotlinx.coroutines.CancellationException
@@ -116,20 +118,18 @@ const val ACCOUNT_SETTINGS_SHORTCUT_SUBSCRIPTIONS_TAG = "accountSettings.shortcu
 const val ACCOUNT_SETTINGS_SHORTCUT_NOTIFICATION_TAG = "accountSettings.shortcutNotification"
 const val ACCOUNT_SETTINGS_SHORTCUT_HISTORY_TAG = "accountSettings.shortcutHistory"
 const val ACCOUNT_SETTINGS_APPEARANCE_TAG = "accountSettings.appearance"
+const val ACCOUNT_SETTINGS_READING_TAG = "accountSettings.reading"
 const val ACCOUNT_SETTINGS_RECOMMEND_TAG = "accountSettings.recommend"
 const val ACCOUNT_SETTINGS_SEARCH_TAG = "accountSettings.search"
 const val ACCOUNT_SETTINGS_SYSTEM_TAG = "accountSettings.system"
 const val ACCOUNT_SETTINGS_DEVELOPER_TAG = "accountSettings.developer"
-
-/** 账号页「开源说明与鸣谢」入口；reopen 走 [com.github.zly2006.zhihu.onboarding.OssNoticeReopenBus]。 */
-const val ACCOUNT_SETTINGS_OSS_NOTICE_TAG = "accountSettings.ossNotice"
 const val ACCOUNT_SETTINGS_LICENSES_TAG = "accountSettings.licenses"
 const val ACCOUNT_SETTINGS_IDENTITY_MANAGEMENT_TAG = "accountSettings.identityManagement"
 
 /**
  * 账号与设置入口页。
  *
- * 已登录时顶部展示头像、昵称、扫码登录和退出登录，Duo3 账号入口迁移开启后会额外展示收藏夹、关注订阅、通知和历史等快捷块；
+ * 已登录时顶部展示头像、昵称、重新登录和退出登录，Duo3 账号入口迁移开启后会额外展示收藏夹、关注订阅、通知和历史等快捷块；
  * 未登录时只展示登录入口。下方设置区是外观、推荐过滤、系统更新、开发者选项和开源许可的统一入口，其中开发者选项通过连续点击版本号开启。
  *
  * 这个页面既可以作为底部栏 tab 展示，也可以作为主页头像弹出的账号面板内容使用，所以 [innerPadding]、[onDismissRequest] 和
@@ -143,31 +143,29 @@ fun AccountSettingScreen(
     showUnreadBadge: Boolean = true,
     onDismissRequest: () -> Unit = {},
     refreshAccountProfileOnEnter: Boolean = true,
-    testAccountData: AccountSettingsAccountState? = null,
 ) {
     val navigator = LocalNavigator.current
+    val accountStore = rememberZhihuAccountStore()
     val accountState = rememberAccountSettingsAccountState()
-    val refreshProfile = rememberAccountProfileRefresher()
-    val requestLogin = rememberAccountLoginRequester()
-    val requestQrLoginScan = rememberAccountQrLoginRequester()
-    val logout = rememberAccountLogoutAction()
-    val selectMainTab = rememberMainTabSelector()
+    val requestLogin = ::requestLoginNavigation
     val settings = rememberSettingsStore()
     val copyPlainText = rememberPlainTextClipboard()
     val openSystemUrl = rememberSystemUrlOpener()
     val userMessages = rememberUserMessageSink()
-    val updateRuntime = rememberSystemUpdateRuntime()
+    val systemUpdateState = rememberSystemUpdateState()
     val versionInfo = rememberAppVersionInfo()
+    val readingPlayerSupported = isReadingPlayerSupported
 
     val useDuo3HomeAccount = remember { settings.getBoolean("duo3_home_account", false) }
     val selectedBottomBarItemKeys = remember {
         normalizeBottomBarSelection(
             settings.getStringSet(
                 BOTTOM_BAR_ITEMS_PREFERENCE_KEY,
-                defaultBottomBarSelectionKeys(useDuo3HomeAccount),
+                defaultBottomBarSelectionKeys(useDuo3HomeAccount, platformBottomBarItemLimit),
             ),
             useDuo3HomeAccount,
             enforceMinimumSelection = true,
+            maximumSelection = platformBottomBarItemLimit,
         )
     }
     var isDeveloper by remember { mutableStateOf(settings.getBoolean("developer", false)) }
@@ -177,7 +175,7 @@ fun AccountSettingScreen(
         settings.putBoolean("developer", isDeveloper)
     }
     val liveData by accountState
-    val data = testAccountData ?: liveData
+    val data = liveData
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -194,7 +192,7 @@ fun AccountSettingScreen(
             LaunchedEffect(data.login, refreshAccountProfileOnEnter) {
                 if (refreshAccountProfileOnEnter && data.login) {
                     try {
-                        refreshProfile()
+                        accountStore.client.refreshAndSaveProfile()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -235,19 +233,6 @@ fun AccountSettingScreen(
                         modifier = Modifier.testTag(ACCOUNT_SETTINGS_PROFILE_NAME_TAG),
                     )
                     Spacer(Modifier.weight(1f))
-                    FilledTonalIconButton(
-                        onClick = {
-                            requestQrLoginScan()
-                        },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "扫码登录",
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(16.dp))
                     FilledTonalIconButton(
                         onClick = {
                             showLogoutDialog = true
@@ -384,7 +369,7 @@ fun AccountSettingScreen(
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                                     .clickable {
                                         onDismissRequest()
-                                        selectMainTab(OnlineHistory)
+                                        navigator.onNavigateTopLevel(OnlineHistory)
                                     }.padding(8.dp, 16.dp),
                                 verticalArrangement = Arrangement.Center,
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -470,7 +455,7 @@ fun AccountSettingScreen(
             }
 
             SettingItemGroup {
-                if (data.login && data.identityManagementSupported) {
+                if (data.login) {
                     SettingItem(
                         title = { Text("身份管理") },
                         description = { Text("创建马甲号或切换当前账号") },
@@ -487,6 +472,16 @@ fun AccountSettingScreen(
                     modifier = Modifier.testTag(ACCOUNT_SETTINGS_APPEARANCE_TAG),
                     onClick = { navigator.onNavigate(Account.AppearanceSettings()) },
                 )
+
+                if (readingPlayerSupported) {
+                    SettingItem(
+                        title = { Text("朗读与播放") },
+                        description = { Text("朗读内容、播放队列与条目过渡") },
+                        icon = { Icon(Icons.AutoMirrored.Filled.VolumeUp, null) },
+                        modifier = Modifier.testTag(ACCOUNT_SETTINGS_READING_TAG),
+                        onClick = { navigator.onNavigate(Account.ReadingSettings) },
+                    )
+                }
 
                 SettingItem(
                     title = { Text("推荐系统与内容过滤") },
@@ -514,7 +509,7 @@ fun AccountSettingScreen(
                 }
             }
 
-            val updateState by updateRuntime.state.collectAsState()
+            val updateState by systemUpdateState.collectAsState()
             LaunchedEffect(updateState) {
                 if (updateState is SystemUpdateState.UpdateAvailable) {
                     val state = updateState as SystemUpdateState.UpdateAvailable
@@ -560,10 +555,10 @@ fun AccountSettingScreen(
                 )
                 SettingItem(
                     title = { Text("GitHub 项目地址") },
-                    description = { Text("https://github.com/Chloemlla/zhihu-plus-plus") },
+                    description = { Text("https://github.com/zly2006/zhihu-plus-plus") },
                     icon = { Icon(painterResource(Res.drawable.ic_github_24dp), null) },
                     onClick = {
-                        openSystemUrl("https://github.com/Chloemlla/zhihu-plus-plus")
+                        openSystemUrl("https://github.com/zly2006/zhihu-plus-plus")
                     },
                     endAction = {
                         Icon(
@@ -579,7 +574,7 @@ fun AccountSettingScreen(
                     description = { Text("AGPL-3.0-only") },
                     icon = { Icon(painterResource(Res.drawable.ic_license_24dp), null) },
                     onClick = {
-                        openSystemUrl("https://github.com/Chloemlla/zhihu-plus-plus/blob/master/LICENSE")
+                        openSystemUrl("https://github.com/zly2006/zhihu-plus-plus/blob/master/LICENSE")
                     },
                     endAction = {
                         Icon(
@@ -588,13 +583,6 @@ fun AccountSettingScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     },
-                )
-                SettingItem(
-                    title = { Text(OssNoticeCopy.REOPEN_LABEL) },
-                    description = { Text("官方仓库、永久免费与第三方鸣谢") },
-                    icon = { Icon(painterResource(Res.drawable.ic_license_24dp), null) },
-                    modifier = Modifier.testTag(ACCOUNT_SETTINGS_OSS_NOTICE_TAG),
-                    onClick = { OssNoticeReopenBus.request?.invoke() },
                 )
                 SettingItem(
                     title = { Text("开源许可") },
@@ -611,11 +599,19 @@ fun AccountSettingScreen(
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text("退出登录") },
-            text = { Text("确定要退出登录吗？") },
+            text = {
+                Text(
+                    if (accountStore.accounts.size > 1) {
+                        "确定退出并移除当前登录账号吗？退出后会自动切换到另一个已保存账号。"
+                    } else {
+                        "确定要退出登录吗？"
+                    },
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        logout()
+                        accountStore.clear()
                         showLogoutDialog = false
                     },
                 ) {

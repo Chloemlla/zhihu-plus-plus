@@ -19,7 +19,7 @@
 
 package com.github.zly2006.zhihu.macos
 
-import com.github.zly2006.zhihu.login.generateQrLoginBitmap
+import com.github.zly2006.zhihu.account.generateQrLoginBitmap
 import com.github.zly2006.zhihu.util.hmacSha1Hex
 import kotlinx.cinterop.autoreleasepool
 import kotlin.experimental.ExperimentalNativeApi
