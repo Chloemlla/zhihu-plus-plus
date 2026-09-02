@@ -17,7 +17,7 @@
 
 package com.github.zly2006.zhihu.ui
 
-import com.github.zly2006.zhihu.shared.data.FeedDisplayItem
+import com.github.zly2006.zhihu.data.FeedDisplayItem
 import com.github.zly2006.zhihu.viewmodel.collectionRandomPageOffsets
 import com.github.zly2006.zhihu.viewmodel.shouldReuseCollectionRandomSession
 import kotlin.test.Test

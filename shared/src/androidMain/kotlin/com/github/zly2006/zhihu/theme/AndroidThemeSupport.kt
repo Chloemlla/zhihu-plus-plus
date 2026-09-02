@@ -30,8 +30,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.github.zly2006.zhihu.shared.platform.androidSettingsStore
-import com.github.zly2006.zhihu.shared.theme.ThemeMode
+import com.github.zly2006.zhihu.platform.androidSettingsStore
 
 object AndroidThemeSettings {
     fun initialize(context: Context) {

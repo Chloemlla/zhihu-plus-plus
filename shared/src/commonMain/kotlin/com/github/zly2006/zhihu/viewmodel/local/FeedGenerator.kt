@@ -17,8 +17,8 @@
 
 package com.github.zly2006.zhihu.viewmodel.local
 
-import com.github.zly2006.zhihu.shared.recommendation.parseLocalContentIdentity
-import com.github.zly2006.zhihu.shared.recommendation.stableLocalFeedId
+import com.github.zly2006.zhihu.recommendation.parseLocalContentIdentity
+import com.github.zly2006.zhihu.recommendation.stableLocalFeedId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.time.Clock

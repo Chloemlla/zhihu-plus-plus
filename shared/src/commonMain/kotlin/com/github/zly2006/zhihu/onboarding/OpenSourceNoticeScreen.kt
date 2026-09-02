@@ -46,8 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.zly2006.zhihu.onboarding.illustration.DynamicColorImageVectors
 import com.github.zly2006.zhihu.onboarding.illustration.coder
-import com.github.zly2006.zhihu.shared.platform.PlatformBackHandler
-import com.github.zly2006.zhihu.shared.platform.rememberSystemUrlOpener
+import com.github.zly2006.zhihu.platform.PlatformBackHandler
+import com.github.zly2006.zhihu.platform.rememberSystemUrlOpener
 
 const val OSS_NOTICE_CONTINUE_TAG = "oss_notice_continue"
 const val OSS_NOTICE_SCREEN_TAG = "oss_notice_screen"

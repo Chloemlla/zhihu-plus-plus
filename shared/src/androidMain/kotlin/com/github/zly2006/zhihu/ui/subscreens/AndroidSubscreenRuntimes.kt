@@ -43,11 +43,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.data.asApiEnvironment
-import com.github.zly2006.zhihu.shared.network.ClashPartnerCompat
-import com.github.zly2006.zhihu.shared.platform.androidUserMessageSink
-import com.github.zly2006.zhihu.shared.platform.rememberIsLiteVariant
-import com.github.zly2006.zhihu.ui.subscreens.IdentityManagementRuntime
-import com.github.zly2006.zhihu.ui.subscreens.unsupportedIdentityManagementRuntime
+import com.github.zly2006.zhihu.network.ClashPartnerCompat
+import com.github.zly2006.zhihu.platform.androidUserMessageSink
+import com.github.zly2006.zhihu.platform.rememberIsLiteVariant
 import com.github.zly2006.zhihu.updater.UpdateManager
 import com.github.zly2006.zhihu.updater.UpdateManager.UpdateState
 import com.github.zly2006.zhihu.util.PowerSaveModeCompat

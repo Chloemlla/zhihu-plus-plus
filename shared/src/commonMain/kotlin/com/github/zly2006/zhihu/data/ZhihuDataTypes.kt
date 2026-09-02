@@ -17,14 +17,14 @@
 
 package com.github.zly2006.zhihu.data
 
+import com.github.zly2006.zhihu.account.DEFAULT_ZHIHU_USER_AGENT
+import com.github.zly2006.zhihu.account.ZhihuAccountProfileSnapshot
+import com.github.zly2006.zhihu.account.ZhihuAccountSession
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.NavDestination
 import com.github.zly2006.zhihu.navigation.Pin
 import com.github.zly2006.zhihu.navigation.Question
-import com.github.zly2006.zhihu.shared.account.DEFAULT_ZHIHU_USER_AGENT
-import com.github.zly2006.zhihu.shared.account.ZhihuAccountProfileSnapshot
-import com.github.zly2006.zhihu.shared.account.ZhihuAccountSession
 import io.ktor.client.HttpClient
 import io.ktor.client.HttpClientConfig
 import io.ktor.client.call.body

@@ -64,10 +64,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
+import com.github.zly2006.zhihu.account.ZhihuPhoneDigitsResult
+import com.github.zly2006.zhihu.account.ZhihuPhoneLoginClient
+import com.github.zly2006.zhihu.account.ZhihuPhoneLoginDeviceInfo
 import com.github.zly2006.zhihu.data.AccountData
-import com.github.zly2006.zhihu.shared.account.ZhihuPhoneDigitsResult
-import com.github.zly2006.zhihu.shared.account.ZhihuPhoneLoginClient
-import com.github.zly2006.zhihu.shared.account.ZhihuPhoneLoginDeviceInfo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

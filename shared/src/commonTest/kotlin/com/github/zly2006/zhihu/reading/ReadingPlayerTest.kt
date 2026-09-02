@@ -17,7 +17,7 @@
 
 package com.github.zly2006.zhihu.reading
 
-import com.github.zly2006.zhihu.shared.platform.SettingsStore
+import com.github.zly2006.zhihu.platform.SettingsStore
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test

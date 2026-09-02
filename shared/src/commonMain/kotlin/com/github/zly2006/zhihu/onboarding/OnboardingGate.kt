@@ -9,7 +9,7 @@
 
 package com.github.zly2006.zhihu.onboarding
 
-import com.github.zly2006.zhihu.shared.platform.SettingsStore
+import com.github.zly2006.zhihu.platform.SettingsStore
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 

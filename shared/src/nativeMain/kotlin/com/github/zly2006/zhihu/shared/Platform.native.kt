@@ -17,6 +17,6 @@
 
 package com.github.zly2006.zhihu.shared
 
-import com.github.zly2006.zhihu.shared.platform.nativeIsDesktop
+import com.github.zly2006.zhihu.platform.nativeIsDesktop
 
 internal actual val platformName: String = if (nativeIsDesktop) "macOS" else "iOS"

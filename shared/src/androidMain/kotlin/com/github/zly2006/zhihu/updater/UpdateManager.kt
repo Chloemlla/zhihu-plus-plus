@@ -22,14 +22,8 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.content.FileProvider
 import com.github.zly2006.zhihu.data.AccountData
-import com.github.zly2006.zhihu.shared.platform.androidSettingsStore
-import com.github.zly2006.zhihu.shared.platform.isAndroidLiteVariantPackageName
-import com.github.zly2006.zhihu.shared.updater.GithubAsset
-import com.github.zly2006.zhihu.shared.updater.GithubRelease
-import com.github.zly2006.zhihu.shared.updater.SchematicVersion
-import com.github.zly2006.zhihu.shared.updater.extractGithubReleaseNotes
-import com.github.zly2006.zhihu.shared.updater.fetchLatestZhihuRelease
-import com.github.zly2006.zhihu.shared.updater.fetchNightlyZhihuRelease
+import com.github.zly2006.zhihu.platform.androidSettingsStore
+import com.github.zly2006.zhihu.platform.isAndroidLiteVariantPackageName
 import com.github.zly2006.zhihu.updater.UpdateManager.UpdateState.Downloading
 import io.ktor.client.call.body
 import io.ktor.client.request.get

@@ -20,15 +20,15 @@ package com.github.zly2006.zhihu.viewmodel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.github.zly2006.zhihu.data.MobileNotificationAuthor
+import com.github.zly2006.zhihu.data.MobileNotificationTimelineItem
+import com.github.zly2006.zhihu.data.ZhihuJson
+import com.github.zly2006.zhihu.data.ZhihuPaging
 import com.github.zly2006.zhihu.data.ZhihuPrivateMessage
 import com.github.zly2006.zhihu.data.ZhihuPrivateMessagePage
-import com.github.zly2006.zhihu.shared.data.MobileNotificationAuthor
-import com.github.zly2006.zhihu.shared.data.MobileNotificationTimelineItem
-import com.github.zly2006.zhihu.shared.data.ZhihuJson
-import com.github.zly2006.zhihu.shared.data.ZhihuPaging
-import com.github.zly2006.zhihu.shared.notification.NotificationSettingsStore
-import com.github.zly2006.zhihu.shared.notification.matchNotificationType
-import com.github.zly2006.zhihu.shared.util.Log
+import com.github.zly2006.zhihu.notification.NotificationSettingsStore
+import com.github.zly2006.zhihu.notification.matchNotificationType
+import com.github.zly2006.zhihu.util.Log
 import com.github.zly2006.zhihu.util.ZhihuMessageBodyEncryptor
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -234,7 +234,7 @@ class PrivateMessageViewModel(
                     rawData,
                 )
                 val p = page.paging
-                lastPaging = com.github.zly2006.zhihu.shared.data.ZhihuPaging(
+                lastPaging = com.github.zly2006.zhihu.data.ZhihuPaging(
                     page = p.page,
                     isEnd = p.isEnd,
                     isStart = p.isStart,

@@ -55,9 +55,9 @@ import androidx.navigationevent.NavigationEventDispatcherOwner
 import com.github.zly2006.zhihu.account.MacosQrLoginScreen
 import com.github.zly2006.zhihu.data.BACKGROUND_UI_DEBUG_DATA_HOME_ENV
 import com.github.zly2006.zhihu.data.macosBackgroundUiDebugDataDirectoryPath
-import com.github.zly2006.zhihu.shared.platform.MacosUserMessageHost
-import com.github.zly2006.zhihu.shared.platform.UserMessageDuration
-import com.github.zly2006.zhihu.shared.platform.showMacosUserMessage
+import com.github.zly2006.zhihu.platform.MacosUserMessageHost
+import com.github.zly2006.zhihu.platform.UserMessageDuration
+import com.github.zly2006.zhihu.platform.showMacosUserMessage
 import com.github.zly2006.zhihu.theme.ZhihuTheme
 import com.github.zly2006.zhihu.ui.MacosZhihuMain
 import kotlinx.cinterop.addressOf

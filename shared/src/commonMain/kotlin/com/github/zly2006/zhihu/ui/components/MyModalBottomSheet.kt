@@ -86,8 +86,8 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import com.github.zly2006.zhihu.shared.platform.PlatformPredictiveBackHandler
-import com.github.zly2006.zhihu.shared.platform.rememberSettingsStore
+import com.github.zly2006.zhihu.platform.PlatformPredictiveBackHandler
+import com.github.zly2006.zhihu.platform.rememberSettingsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.max

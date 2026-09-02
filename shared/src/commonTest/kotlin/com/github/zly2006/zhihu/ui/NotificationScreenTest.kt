@@ -17,15 +17,15 @@
 
 package com.github.zly2006.zhihu.ui
 
+import com.github.zly2006.zhihu.data.MobileNotificationContent
+import com.github.zly2006.zhihu.data.MobileNotificationHead
+import com.github.zly2006.zhihu.data.MobileNotificationTarget
+import com.github.zly2006.zhihu.data.MobileNotificationTargetSource
+import com.github.zly2006.zhihu.data.MobileNotificationTimelineItem
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.Notification
 import com.github.zly2006.zhihu.navigation.Person
-import com.github.zly2006.zhihu.shared.data.MobileNotificationContent
-import com.github.zly2006.zhihu.shared.data.MobileNotificationHead
-import com.github.zly2006.zhihu.shared.data.MobileNotificationTarget
-import com.github.zly2006.zhihu.shared.data.MobileNotificationTargetSource
-import com.github.zly2006.zhihu.shared.data.MobileNotificationTimelineItem
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

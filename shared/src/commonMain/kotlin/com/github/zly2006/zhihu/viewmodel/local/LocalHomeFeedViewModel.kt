@@ -18,9 +18,9 @@
 package com.github.zly2006.zhihu.viewmodel.local
 
 import androidx.lifecycle.viewModelScope
-import com.github.zly2006.zhihu.shared.data.Feed
-import com.github.zly2006.zhihu.shared.data.FeedDisplayItem
-import com.github.zly2006.zhihu.shared.data.toFeedDisplayItemNavDestinationJson
+import com.github.zly2006.zhihu.data.Feed
+import com.github.zly2006.zhihu.data.FeedDisplayItem
+import com.github.zly2006.zhihu.data.toFeedDisplayItemNavDestinationJson
 import com.github.zly2006.zhihu.viewmodel.ContentInteractionEnvironment
 import com.github.zly2006.zhihu.viewmodel.LocalRecommendationEnvironment
 import com.github.zly2006.zhihu.viewmodel.PaginationEnvironment

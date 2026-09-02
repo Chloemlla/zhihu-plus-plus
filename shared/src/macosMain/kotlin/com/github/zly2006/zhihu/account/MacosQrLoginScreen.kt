@@ -34,12 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.github.zly2006.zhihu.shared.account.NativeAccountStore
-import com.github.zly2006.zhihu.shared.login.SharedQrLoginPane
-import com.github.zly2006.zhihu.shared.platform.MacosUserMessageHost
-import com.github.zly2006.zhihu.shared.platform.UserMessageDuration
-import com.github.zly2006.zhihu.shared.platform.macosQrLoginRequestVersion
-import com.github.zly2006.zhihu.shared.platform.showMacosUserMessage
+import com.github.zly2006.zhihu.login.SharedQrLoginPane
+import com.github.zly2006.zhihu.platform.MacosUserMessageHost
+import com.github.zly2006.zhihu.platform.UserMessageDuration
+import com.github.zly2006.zhihu.platform.macosQrLoginRequestVersion
+import com.github.zly2006.zhihu.platform.showMacosUserMessage
 import com.github.zly2006.zhihu.theme.ZhihuTheme
 import com.github.zly2006.zhihu.ui.MacosZhihuMain
 import kotlinx.coroutines.CancellationException

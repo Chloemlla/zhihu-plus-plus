@@ -50,7 +50,7 @@ kotlin {
     }
 
     android {
-        namespace = "com.github.zly2006.zhihu.shared.localdb"
+        namespace = "com.github.zly2006.zhihu.localdb"
         compileSdk = 37
         minSdk = 27
 

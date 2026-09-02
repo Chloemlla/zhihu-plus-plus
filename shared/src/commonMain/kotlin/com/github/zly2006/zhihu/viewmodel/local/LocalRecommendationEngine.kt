@@ -17,16 +17,16 @@
 
 package com.github.zly2006.zhihu.viewmodel.local
 
+import com.github.zly2006.zhihu.data.CommonFeed
+import com.github.zly2006.zhihu.data.Feed
+import com.github.zly2006.zhihu.data.target
 import com.github.zly2006.zhihu.navigation.NavDestination
-import com.github.zly2006.zhihu.shared.data.CommonFeed
-import com.github.zly2006.zhihu.shared.data.Feed
-import com.github.zly2006.zhihu.shared.data.target
-import com.github.zly2006.zhihu.shared.recommendation.LocalReasonPreference
-import com.github.zly2006.zhihu.shared.recommendation.applyReasonDiversity
-import com.github.zly2006.zhihu.shared.recommendation.buildLocalRecommendationReason
-import com.github.zly2006.zhihu.shared.recommendation.parseLocalContentIdentity
-import com.github.zly2006.zhihu.shared.recommendation.scoreFeedTarget
-import com.github.zly2006.zhihu.shared.recommendation.toLocalContentIdentity
+import com.github.zly2006.zhihu.recommendation.LocalReasonPreference
+import com.github.zly2006.zhihu.recommendation.applyReasonDiversity
+import com.github.zly2006.zhihu.recommendation.buildLocalRecommendationReason
+import com.github.zly2006.zhihu.recommendation.parseLocalContentIdentity
+import com.github.zly2006.zhihu.recommendation.scoreFeedTarget
+import com.github.zly2006.zhihu.recommendation.toLocalContentIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

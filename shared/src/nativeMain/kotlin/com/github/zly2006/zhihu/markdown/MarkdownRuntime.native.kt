@@ -27,9 +27,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.platform.Font
-import com.github.zly2006.zhihu.shared.account.NativeAccountStore
-import com.github.zly2006.zhihu.shared.data.toCookieHeaderString
-import com.github.zly2006.zhihu.shared.platform.nativeAppPrivateDirectoryPath
+import com.github.zly2006.zhihu.account.NativeAccountStore
+import com.github.zly2006.zhihu.data.toCookieHeaderString
+import com.github.zly2006.zhihu.platform.nativeAppPrivateDirectoryPath
 import com.hrm.latex.renderer.font.MathFont
 import io.ktor.client.call.body
 import io.ktor.client.request.get
