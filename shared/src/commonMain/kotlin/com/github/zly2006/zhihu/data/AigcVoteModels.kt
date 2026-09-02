@@ -15,7 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.github.zly2006.zhihu.aigc
+package com.github.zly2006.zhihu.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

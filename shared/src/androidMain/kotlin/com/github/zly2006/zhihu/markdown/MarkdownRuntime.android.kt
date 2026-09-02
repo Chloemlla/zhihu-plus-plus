@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.github.zly2006.zhihu.account.androidZhihuAccountStore
 import com.github.zly2006.zhihu.data.AccountData
 import com.github.zly2006.zhihu.data.toCookieHeaderString
-import com.github.zly2006.zhihu.latex.rememberLatexFonts
 import com.hrm.latex.renderer.font.MathFont
 
 @Composable
