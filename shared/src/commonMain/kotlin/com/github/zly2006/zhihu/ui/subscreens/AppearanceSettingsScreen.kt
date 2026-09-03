@@ -295,7 +295,6 @@ fun AppearanceSettingsScreen(
     onExit: () -> Unit,
 ) {
     val settingKey = setting.orEmpty()
-    val runtime = rememberThemeSettingsRuntime()
     val settings = rememberSettingsStore()
     val userMessages = rememberUserMessageSink()
 
@@ -406,7 +405,8 @@ fun AppearanceSettingsScreen(
                                 val isSelected = currentThemeMode == mode
                                 OutlinedButton(
                                     onClick = {
-                                        runtime.setThemeMode(mode)
+                                        ThemeManager.setThemeMode(mode)
+                                        settings.putString("themeMode", mode.name)
                                         userMessages.showShortMessage("已切换到$label")
                                     },
                                     colors = ButtonDefaults.outlinedButtonColors(
@@ -435,7 +435,8 @@ fun AppearanceSettingsScreen(
                     description = { Text("根据系统壁纸自动提取主题色（Android 12+ 可用）。\n关闭后可以自己设定主题颜色。") },
                     checked = useDynamicColor,
                     onCheckedChange = {
-                        runtime.setUseDynamicColor(it)
+                        ThemeManager.setUseDynamicColor(it)
+                        settings.putBoolean("useDynamicColor", it)
                         userMessages.showShortMessage("已${if (it) "启用" else "禁用"}动态取色")
                     },
                     settingKey = "dynamicColor",
@@ -468,7 +469,8 @@ fun AppearanceSettingsScreen(
                         initialColor = customColor,
                         onDismiss = { showColorPicker = false },
                         onColorSelected = { color ->
-                            runtime.setCustomColor(color)
+                            ThemeManager.setCustomColor(color)
+                            settings.putInt("customThemeColor", color.toArgb())
                             userMessages.showShortMessage("主题色已保存")
                             showColorPicker = false
                         },
@@ -546,7 +548,11 @@ fun AppearanceSettingsScreen(
                         ),
                         onDismiss = { showBackgroundColorPicker = false },
                         onColorSelected = { color ->
-                            runtime.setBackgroundColor(color, currentIsDarkTheme)
+                            ThemeManager.setBackgroundColor(color, currentIsDarkTheme)
+                            settings.putInt(
+                                if (currentIsDarkTheme) "backgroundColorDark" else "backgroundColorLight",
+                                color.toArgb(),
+                            )
                             userMessages.showShortMessage("背景颜色已保存")
                             showBackgroundColorPicker = false
                         },
@@ -1509,7 +1515,7 @@ fun AppearanceSettingsScreen(
                     Text(
                         text = buildAnnotatedString {
                             append("以上设置项可能随时更改，或并入主线。\n欢迎")
-                            withLink(LinkAnnotation.Url("https://github.com/Chloemlla/zhihu-plus-plus/issues")) {
+                            withLink(LinkAnnotation.Url("https://github.com/zly2006/zhihu-plus-plus/issues")) {
                                 withStyle(
                                     MaterialTheme.typography.bodyMedium
                                         .copy(

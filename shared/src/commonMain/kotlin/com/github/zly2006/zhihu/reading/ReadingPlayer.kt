@@ -194,6 +194,7 @@ data class ReadingQueueItem(
         )
         ReadingContentType.Pin -> Pin(
             id = id,
+            authorName = author,
             readingQueueSourceId = sourceId,
         )
         ReadingContentType.Question -> Question(
@@ -720,7 +721,7 @@ fun FeedDisplayItem.toReadingQueueItem(): ReadingQueueItem? {
             is Pin -> ReadingQueueItem(
                 contentType = ReadingContentType.Pin,
                 id = destination.id,
-                author = authorName.cleanReadingMetadata(),
+                author = authorName.cleanReadingMetadata().ifBlank { destination.authorName.cleanReadingMetadata() },
             )
             is Question -> ReadingQueueItem(
                 contentType = ReadingContentType.Question,

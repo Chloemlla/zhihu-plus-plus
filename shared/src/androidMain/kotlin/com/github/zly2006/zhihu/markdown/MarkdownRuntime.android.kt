@@ -27,7 +27,7 @@ import com.hrm.latex.renderer.font.MathFont
 @Composable
 actual fun rememberMarkdownRuntime(): MarkdownRuntime {
     val context = LocalContext.current
-    val httpClient = AccountData.httpClient(context)
+    val httpClient = androidZhihuAccountStore(context).client.httpClient()
     val fontResult = rememberLatexFonts(context, httpClient)
 
     return object : MarkdownRuntime {

@@ -75,6 +75,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.github.zly2006.zhihu.platform.exportTestTagsForUiAutomation
 import com.github.zly2006.zhihu.reading.ReadingPlaybackStatus
 import com.github.zly2006.zhihu.reading.ReadingPlayerState
 import com.github.zly2006.zhihu.reading.ReadingQueueItem
@@ -246,6 +247,7 @@ fun CompactReadingPlayerButton(
                 contentDescription = "展开朗读播放器，当前进度 $progress"
             },
         preferenceName = "readingPlayerCompact",
+        initiallyOnLeft = true,
         onClick = onExpand,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -313,7 +315,8 @@ private fun ReadingPlaybackSpeedMenu(
             },
             offset = DpOffset(x = (-16).dp, y = 0.dp),
             modifier = Modifier
-                .testTag(READING_PLAYER_SPEED_MENU_TAG),
+                .testTag(READING_PLAYER_SPEED_MENU_TAG)
+                .exportTestTagsForUiAutomation(),
         ) {
             readingPlaybackSpeedOptions.forEach { (option, label) ->
                 val isSelected = abs(option - speed) < 0.001f

@@ -88,6 +88,7 @@ import com.github.zly2006.zhihu.data.OfficialBadge
 import com.github.zly2006.zhihu.data.ZhihuJson
 import com.github.zly2006.zhihu.data.officialBadge
 import com.github.zly2006.zhihu.data.officialBadgeDetails
+import com.github.zly2006.zhihu.data.toFeedDisplayItemNavDestinationJson
 import com.github.zly2006.zhihu.navigation.Article
 import com.github.zly2006.zhihu.navigation.ArticleType
 import com.github.zly2006.zhihu.navigation.CollectionContent
@@ -99,6 +100,7 @@ import com.github.zly2006.zhihu.platform.rememberExternalUrlOpener
 import com.github.zly2006.zhihu.platform.rememberImagePreviewOpener
 import com.github.zly2006.zhihu.platform.rememberUserMessageSink
 import com.github.zly2006.zhihu.platform.rememberZhihuWebUrlOpener
+import com.github.zly2006.zhihu.reading.RegisterReadingQueueSource
 import com.github.zly2006.zhihu.ui.components.AuthorBadge
 import com.github.zly2006.zhihu.ui.components.FeedCard
 import com.github.zly2006.zhihu.ui.components.PaginatedList
@@ -494,6 +496,58 @@ class PersonViewModel(
     }
 }
 
+private fun DataHolder.Answer.toPeopleAnswerDisplayItem(): FeedDisplayItem {
+    val destination = Article(
+        type = ArticleType.Answer,
+        id = id,
+        title = question.title,
+        authorName = author.name,
+        authorBio = author.headline,
+        avatarSrc = author.avatarUrl,
+        excerpt = excerpt,
+    )
+    return FeedDisplayItem(
+        title = question.title,
+        summary = excerpt,
+        details = "回答 · $voteupCount 赞同 · $commentCount 评论",
+        feed = null,
+        navDestinationJson = destination.toFeedDisplayItemNavDestinationJson(),
+        raw = this,
+    )
+}
+
+private fun DataHolder.Article.toPeopleArticleDisplayItem(): FeedDisplayItem {
+    val destination = Article(
+        type = ArticleType.Article,
+        id = id,
+        title = title,
+        authorName = author.name,
+        authorBio = author.headline,
+        avatarSrc = author.avatarUrl,
+        excerpt = excerpt,
+    )
+    return FeedDisplayItem(
+        title = title,
+        summary = excerpt,
+        details = "文章 · $voteupCount 赞同 · $commentCount 评论",
+        feed = null,
+        navDestinationJson = destination.toFeedDisplayItemNavDestinationJson(),
+        raw = this,
+    )
+}
+
+private fun DataHolder.Pin.toPeoplePinDisplayItem(): FeedDisplayItem? {
+    val pinId = id.toLongOrNull() ?: return null
+    return FeedDisplayItem(
+        title = Ksoup.parse(excerptTitle).text(),
+        summary = null,
+        details = "想法 · $likeCount 赞 · $commentCount 评论",
+        feed = null,
+        navDestinationJson = Pin(id = pinId, authorName = author.name).toFeedDisplayItemNavDestinationJson(),
+        raw = this,
+    )
+}
+
 private val PEOPLE_SCREEN_TITLES = listOf(
     "回答",
     "文章",
@@ -609,6 +663,31 @@ fun PeopleScreen(
         initialPage = peopleScreenInitialPage(person),
         pageCount = { PEOPLE_SCREEN_TITLES.size },
     )
+    val readingQueueSourceId = when (pagerState.currentPage) {
+        0 -> "people:${person.userTokenOrId}:answers:${viewModel.answersFeedModel.sortBy}"
+        1 -> "people:${person.userTokenOrId}:articles:${viewModel.articlesFeedModel.sortBy}"
+        2 -> "people:${person.userTokenOrId}:activities:${viewModel.activitiesFeedModel.sort}"
+        5 -> "people:${person.userTokenOrId}:pins"
+        else -> null
+    }
+    when (pagerState.currentPage) {
+        0 -> RegisterReadingQueueSource(
+            sourceId = requireNotNull(readingQueueSourceId),
+            items = viewModel.answersFeedModel.allData.map(DataHolder.Answer::toPeopleAnswerDisplayItem),
+        )
+        1 -> RegisterReadingQueueSource(
+            sourceId = requireNotNull(readingQueueSourceId),
+            items = viewModel.articlesFeedModel.allData.map(DataHolder.Article::toPeopleArticleDisplayItem),
+        )
+        2 -> RegisterReadingQueueSource(
+            sourceId = requireNotNull(readingQueueSourceId),
+            items = viewModel.activitiesFeedModel.displayItems,
+        )
+        5 -> RegisterReadingQueueSource(
+            sourceId = requireNotNull(readingQueueSourceId),
+            items = viewModel.pinsFeedModel.allData.mapNotNull(DataHolder.Pin::toPeoplePinDisplayItem),
+        )
+    }
 
     LaunchedEffect(viewModel) {
         try {
@@ -644,14 +723,6 @@ fun PeopleScreen(
     }
     val collapsedFraction = scrollBehavior.state.collapsedFraction
     val headerHeight = lerp(240.dp, 0.dp, collapsedFraction)
-
-    fun updateAnswersSort(newSort: String) {
-        viewModel.answersFeedModel.changeSortBy(newSort, paginationEnvironment)
-    }
-
-    fun updateArticlesSort(newSort: String) {
-        viewModel.articlesFeedModel.changeSortBy(newSort, paginationEnvironment)
-    }
 
     Scaffold(
         modifier = Modifier
@@ -800,7 +871,7 @@ fun PeopleScreen(
                         ) {
                             SortBar(
                                 currentSort = viewModel.answersFeedModel.sortBy,
-                                onSortChange = ::updateAnswersSort,
+                                onSortChange = { viewModel.answersFeedModel.changeSortBy(it, paginationEnvironment) },
                                 hotTag = PEOPLE_SCREEN_ANSWER_SORT_HOT_TAG,
                                 timeTag = PEOPLE_SCREEN_ANSWER_SORT_TIME_TAG,
                             )
@@ -815,23 +886,12 @@ fun PeopleScreen(
                                 key = { it.id },
                             ) {
                                 FeedCard(
-                                    FeedDisplayItem(
-                                        title = it.question.title,
-                                        summary = it.excerpt,
-                                        details = "回答 · ${it.voteupCount} 赞同 · ${it.commentCount} 评论",
-                                        feed = null,
-                                    ),
+                                    it.toPeopleAnswerDisplayItem(),
+                                    readingQueueSourceId = readingQueueSourceId,
                                     modifier = Modifier.testTag("people_screen_answer_item_${it.id}"),
                                     horizontalPadding = 4.dp,
-                                ) {
-                                    navigator.onNavigate(
-                                        Article(
-                                            type = ArticleType.Answer,
-                                            id = it.id,
-                                            title = it.question.title,
-                                            excerpt = it.excerpt,
-                                        ),
-                                    )
+                                ) { _, destination ->
+                                    destination?.let(navigator.onNavigate)
                                 }
                             }
                         }
@@ -846,7 +906,7 @@ fun PeopleScreen(
                         ) {
                             SortBar(
                                 currentSort = viewModel.articlesFeedModel.sortBy,
-                                onSortChange = ::updateArticlesSort,
+                                onSortChange = { viewModel.articlesFeedModel.changeSortBy(it, paginationEnvironment) },
                                 hotTag = PEOPLE_SCREEN_ARTICLE_SORT_HOT_TAG,
                                 timeTag = PEOPLE_SCREEN_ARTICLE_SORT_TIME_TAG,
                             )
@@ -861,23 +921,12 @@ fun PeopleScreen(
                                 key = { it.id },
                             ) {
                                 FeedCard(
-                                    FeedDisplayItem(
-                                        title = it.title,
-                                        summary = it.excerpt,
-                                        details = "文章 · ${it.voteupCount} 赞同 · ${it.commentCount} 评论",
-                                        feed = null,
-                                    ),
+                                    it.toPeopleArticleDisplayItem(),
+                                    readingQueueSourceId = readingQueueSourceId,
                                     modifier = Modifier.testTag("people_screen_article_item_${it.id}"),
                                     horizontalPadding = 4.dp,
-                                ) {
-                                    navigator.onNavigate(
-                                        Article(
-                                            type = ArticleType.Article,
-                                            id = it.id,
-                                            title = it.title,
-                                            excerpt = it.excerpt,
-                                        ),
-                                    )
+                                ) { _, destination ->
+                                    destination?.let(navigator.onNavigate)
                                 }
                             }
                         }
@@ -896,6 +945,7 @@ fun PeopleScreen(
                         ) {
                             FeedCard(
                                 it,
+                                readingQueueSourceId = readingQueueSourceId,
                                 modifier = Modifier.testTag("people_screen_activity_item_${it.stableKey}"),
                                 horizontalPadding = 4.dp,
                             )
@@ -955,6 +1005,7 @@ fun PeopleScreen(
                             PinListItem(
                                 pin = pin,
                                 itemTag = "people_screen_pin_item_${pin.id}",
+                                readingQueueSourceId = readingQueueSourceId,
                             )
                         }
                     }
@@ -1201,6 +1252,7 @@ private fun QuestionListItem(
 private fun PinListItem(
     pin: DataHolder.Pin,
     itemTag: String? = null,
+    readingQueueSourceId: String? = null,
 ) {
     val navigator = LocalNavigator.current
     Column(
@@ -1208,7 +1260,13 @@ private fun PinListItem(
             .fillMaxWidth()
             .then(if (itemTag != null) Modifier.testTag(itemTag) else Modifier)
             .clickable {
-                navigator.onNavigate(Pin(pin.id.toLong()))
+                navigator.onNavigate(
+                    Pin(
+                        id = pin.id.toLong(),
+                        authorName = pin.author.name,
+                        readingQueueSourceId = readingQueueSourceId,
+                    ),
+                )
             }.padding(vertical = 8.dp, horizontal = 4.dp),
     ) {
         val text = remember { Ksoup.parse(pin.excerptTitle).text() }

@@ -26,6 +26,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
@@ -118,9 +119,7 @@ class ZhihuMainNavigationInstrumentedTest {
         composeRule.onNodeWithTag("nav_tab_daily").assertIsSelected()
         composeRule.onNodeWithTag("nav_tab_home").assertDoesNotExist()
 
-        composeRule.activity.runOnUiThread {
-            composeRule.activity.navigateMainTab(Follow)
-        }
+        composeRule.onNodeWithTag("nav_tab_follow").performClick()
 
         composeRule.waitUntilTabSelected("nav_tab_follow")
         composeRule.onNodeWithTag("nav_tab_follow").assertIsSelected()
