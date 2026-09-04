@@ -64,16 +64,6 @@ actual fun rememberMarkdownMathFont(): MathFont? {
 }
 
 @Composable
-actual fun rememberMarkdownRuntime(): MarkdownRuntime {
-    val mathFont = rememberMarkdownMathFont()
-    return remember(mathFont) {
-        object : MarkdownRuntime {
-            override val mathFont: MathFont? = mathFont
-        }
-    }
-}
-
-@Composable
 actual fun rememberMarkdownImageRequestHeaders(): MarkdownImageRequestHeaders {
     val store = defaultNativeAccountStore
     val session = remember(store) { store.session }

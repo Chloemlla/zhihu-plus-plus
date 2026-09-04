@@ -25,17 +25,6 @@ import com.github.zly2006.zhihu.data.toCookieHeaderString
 import com.hrm.latex.renderer.font.MathFont
 
 @Composable
-actual fun rememberMarkdownRuntime(): MarkdownRuntime {
-    val context = LocalContext.current
-    val httpClient = androidZhihuAccountStore(context).client.httpClient()
-    val fontResult = rememberLatexFonts(context, httpClient)
-
-    return object : MarkdownRuntime {
-        override val mathFont: MathFont? = fontResult.downloaded?.mathFont
-    }
-}
-
-@Composable
 actual fun rememberMarkdownMathFont(): MathFont? {
     val context = LocalContext.current
     val httpClient = androidZhihuAccountStore(context).client.httpClient()

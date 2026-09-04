@@ -57,24 +57,6 @@ actual fun rememberMarkdownMathFont(): MathFont? {
 }
 
 @Composable
-actual fun rememberMarkdownRuntime(): MarkdownRuntime {
-    val store = remember { DesktopAccountStore() }
-    var mathFont by remember { mutableStateOf<MathFont?>(null) }
-
-    LaunchedEffect(store) {
-        mathFont = runCatching {
-            loadDesktopMathFont(store)
-        }.getOrNull()
-    }
-
-    return remember(mathFont) {
-        object : MarkdownRuntime {
-            override val mathFont: MathFont? = mathFont
-        }
-    }
-}
-
-@Composable
 actual fun rememberMarkdownImageRequestHeaders(): MarkdownImageRequestHeaders {
     val store = defaultDesktopAccountStore
     val session = remember(store) { store.session }

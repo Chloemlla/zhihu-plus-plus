@@ -25,13 +25,6 @@ import coil3.network.httpHeaders
 import coil3.request.ImageRequest
 import com.hrm.latex.renderer.font.MathFont
 
-interface MarkdownRuntime {
-    val mathFont: MathFont?
-}
-
-@Composable
-expect fun rememberMarkdownRuntime(): MarkdownRuntime
-
 @Composable
 expect fun rememberMarkdownMathFont(): MathFont?
 
