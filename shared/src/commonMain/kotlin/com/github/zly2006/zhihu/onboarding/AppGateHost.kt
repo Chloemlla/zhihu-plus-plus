@@ -19,14 +19,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.github.zly2006.zhihu.platform.rememberSettingsStore
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * 账号页等入口请求重开开源说明时调用。
  * [AppGateHost] 挂载时注册，卸载时清空。
  */
+@OptIn(ExperimentalAtomicApi::class)
 object OssNoticeReopenBus {
-    @Volatile
-    var request: (() -> Unit)? = null
+    val request = AtomicReference<(() -> Unit)?>(null)
 }
 
 /**
@@ -44,10 +46,10 @@ fun AppGateHost(content: @Composable () -> Unit) {
 
     DisposableEffect(Unit) {
         val reopen: () -> Unit = { reopenOss = true }
-        OssNoticeReopenBus.request = reopen
+        OssNoticeReopenBus.request.value = reopen
         onDispose {
-            if (OssNoticeReopenBus.request === reopen) {
-                OssNoticeReopenBus.request = null
+            if (OssNoticeReopenBus.request.value === reopen) {
+                OssNoticeReopenBus.request.value = null
             }
         }
     }
