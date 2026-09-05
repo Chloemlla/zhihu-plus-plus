@@ -363,6 +363,19 @@ fun SystemAndUpdateSettingsScreen(
                     )
                 }
 
+                var autoCheckUpdates by remember { mutableStateOf(settings.getBoolean("autoCheckUpdates", true)) }
+                SettingItemWithSwitch(
+                    title = { Text("自动检查更新") },
+                    description = { Text("应用启动后后台检查新版本，并在首页显示更新提醒") },
+                    checked = autoCheckUpdates,
+                    onCheckedChange = {
+                        autoCheckUpdates = it
+                        settings.putBoolean("autoCheckUpdates", it)
+                    },
+                    settingKey = "autoCheckUpdates",
+                    highlightedKey = highlightedSetting,
+                )
+
                 var checkNightlyUpdates by remember { mutableStateOf(settings.getBoolean("checkNightlyUpdates", false)) }
                 SettingItemWithSwitch(
                     title = { Text("检查 Nightly 版本更新") },
