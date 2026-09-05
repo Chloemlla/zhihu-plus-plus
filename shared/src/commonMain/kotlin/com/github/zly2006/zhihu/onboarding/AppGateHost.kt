@@ -28,7 +28,16 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  */
 @OptIn(ExperimentalAtomicApi::class)
 object OssNoticeReopenBus {
-    val request = AtomicReference<(() -> Unit)?>(null)
+    private val request = AtomicReference<(() -> Unit)?>(null)
+
+    fun register(reopen: () -> Unit) {
+        request.store(reopen)
+    }
+
+    /** 仅当仍注册着传入的 [reopen] 时清除，避免误删后一次挂载的注册。 */
+    fun unregister(reopen: () -> Unit) {
+        request.compareAndSet(reopen, null)
+    }
 }
 
 /**
@@ -46,11 +55,9 @@ fun AppGateHost(content: @Composable () -> Unit) {
 
     DisposableEffect(Unit) {
         val reopen: () -> Unit = { reopenOss = true }
-        OssNoticeReopenBus.request.value = reopen
+        OssNoticeReopenBus.register(reopen)
         onDispose {
-            if (OssNoticeReopenBus.request.value === reopen) {
-                OssNoticeReopenBus.request.value = null
-            }
+            OssNoticeReopenBus.unregister(reopen)
         }
     }
 
